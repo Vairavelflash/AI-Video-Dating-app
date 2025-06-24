@@ -7,6 +7,7 @@ interface SelectedPersona {
   interests: string[];
   image: string;
   personaId: string;
+  replicaId?: string;
   gender: "male" | "female";
 }
 

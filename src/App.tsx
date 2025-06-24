@@ -1,56 +1,88 @@
+import React, { useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useAtom } from "jotai";
-import { screenAtom } from "./store/screens";
+import { userAtom } from "./store/auth";
+import { supabase } from "./lib/supabase";
 import { Header } from "./components/Header";
-import {
-  IntroLoading,
-  Outage,
-  OutOfMinutes,
-  LoginPage,
-  PersonaSelection,
-  VideoCall,
-  Instructions,
-  Conversation,
-  FinalScreen,
-  Settings,
-} from "./screens";
+import { LoginPage } from "./screens/LoginPage";
+import { SignupPage } from "./screens/SignupPage";
+import { PersonaSelection } from "./screens/PersonaSelection";
+import { VideoCallPage } from "./screens/VideoCallPage";
+import { Settings } from "./screens/Settings";
 
 function App() {
-  const [{ currentScreen }] = useAtom(screenAtom);
+  const [user, setUser] = useAtom(userAtom);
 
-  const renderScreen = () => {
-    switch (currentScreen) {
-      case "introLoading":
-        return <IntroLoading />;
-      case "outage":
-        return <Outage />;
-      case "outOfMinutes":
-        return <OutOfMinutes />;
-      case "loginPage":
-        return <LoginPage />;
-      case "personaSelection":
-        return <PersonaSelection />;
-      case "videoCall":
-        return <VideoCall />;
-      case "instructions":
-        return <Instructions />;
-      case "conversation":
-        return <Conversation />;
-      case "finalScreen":
-        return <FinalScreen />;
-      case "settings":
-        return <Settings />;
-      default:
-        return <IntroLoading />;
-    }
-  };
+  useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          username: session.user.user_metadata?.username || session.user.email!.split('@')[0],
+          created_at: session.user.created_at,
+        });
+      }
+    });
 
-  const showHeader = !["introLoading", "loginPage", "conversation"].includes(currentScreen);
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          username: session.user.user_metadata?.username || session.user.email!.split('@')[0],
+          created_at: session.user.created_at,
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [setUser]);
 
   return (
-    <main className="flex h-svh flex-col items-center justify-between gap-3 sm:gap-4  bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50">
-      {showHeader && <Header />}
-      {renderScreen()}
-    </main>
+    <Router>
+      <main className="flex h-svh flex-col items-center justify-between gap-3 sm:gap-4 bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50">
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          
+          {/* Video call route - accessible without header */}
+          <Route path="/video-call" element={<VideoCallPage />} />
+          
+          {/* Protected routes with header */}
+          <Route path="/personas" element={
+            user ? (
+              <>
+                <Header />
+                <PersonaSelection />
+              </>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } />
+          
+          <Route path="/settings" element={
+            user ? (
+              <Settings />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } />
+          
+          {/* Default redirect */}
+          <Route path="/" element={
+            user ? <Navigate to="/personas" replace /> : <Navigate to="/login" replace />
+          } />
+        </Routes>
+      </main>
+    </Router>
   );
 }
 

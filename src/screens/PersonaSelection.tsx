@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { useAtom } from "jotai";
-import { screenAtom } from "@/store/screens";
+import { useNavigate } from "react-router-dom";
+import { useAtom, useAtomValue } from "jotai";
 import { selectedPersonaAtom } from "@/store/persona";
 import { settingsAtom } from "@/store/settings";
+import { userAtom } from "@/store/auth";
 import { Heart, Calendar, Sparkles, Clock, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -79,9 +80,10 @@ const personas: Persona[] = [
 
 export const PersonaSelection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"men" | "women">("men");
-  const [, setScreenState] = useAtom(screenAtom);
+  const navigate = useNavigate();
   const [, setSelectedPersona] = useAtom(selectedPersonaAtom);
   const [settings] = useAtom(settingsAtom);
+  const user = useAtomValue(userAtom);
 
   const currentPersonas = personas.filter(p => 
     activeTab === "men" ? p.gender === "male" : p.gender === "female"
@@ -91,6 +93,8 @@ export const PersonaSelection: React.FC = () => {
     if (!persona.available) return;
     
     const personaId = activeTab === "men" ? settings.menPersonaId : settings.womenPersonaId;
+    const replicaId = activeTab === "men" ? settings.menReplicaId : settings.womenReplicaId;
+    
     if (!personaId || personaId.trim() === '') {
       alert("Please configure persona IDs in Settings first!");
       return;
@@ -99,9 +103,13 @@ export const PersonaSelection: React.FC = () => {
     // Update settings with the selected persona ID
     setSelectedPersona({
       ...persona,
-      personaId: personaId.trim()
+      personaId: personaId.trim(),
+      replicaId: replicaId?.trim() || ""
     });
-    setScreenState({ currentScreen: "videoCall" });
+    
+    // Open video call in new tab
+    const videoCallUrl = `/video-call?persona=${persona.id}&gender=${persona.gender}`;
+    window.open(videoCallUrl, '_blank');
   };
 
   const hasPersonaId = activeTab === "men" ? settings.menPersonaId : settings.womenPersonaId;
@@ -121,6 +129,9 @@ export const PersonaSelection: React.FC = () => {
         <p className="text-gray-600 text-lg max-w-2xl mx-auto" style={{ fontFamily: 'Inter, sans-serif' }}>
           Select an AI persona to practice your dating conversations. Build confidence in a safe, judgment-free environment.
         </p>
+        {user && (
+          <p className="text-pink-600 font-medium mt-2">Welcome back, {user.username}!</p>
+        )}
       </motion.div>
 
       {/* Tabs */}

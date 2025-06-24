@@ -9,7 +9,6 @@ import { settingsAtom, settingsSavedAtom } from "@/store/settings";
 import { screenAtom } from "@/store/screens";
 import { X, Sparkles, Heart } from "lucide-react";
 import * as React from "react";
-import { apiTokenAtom } from "@/store/tokens";
 
 // Button Component
 const Button = React.forwardRef<
@@ -94,7 +93,6 @@ Label.displayName = "Label";
 export const Settings: React.FC = () => {
   const [settings, setSettings] = useAtom(settingsAtom);
   const [, setScreenState] = useAtom(screenAtom);
-  const [token, setToken] = useAtom(apiTokenAtom);
   const [, setSettingsSaved] = useAtom(settingsSavedAtom);
 
   const languages = [
@@ -114,7 +112,7 @@ export const Settings: React.FC = () => {
 
   const handleClose = () => {
     setScreenState({ 
-      currentScreen: token ? "personaSelection" : "loginPage" 
+      currentScreen: "personaSelection"
     });
   };
 
@@ -350,17 +348,15 @@ export const Settings: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="apiToken" className="text-gray-800 font-medium">
+                <Label htmlFor="apiKey" className="text-gray-800 font-medium">
                   Tavus API Key
                 </Label>
                 <Input
-                  id="apiToken"
+                  id="apiKey"
                   type="password"
-                  value={token || ""}
+                  value={settings.apiKey || ""}
                   onChange={(e) => {
-                    const newToken = e.target.value;
-                    setToken(newToken);
-                    localStorage.setItem("tavus-token", newToken);
+                    setSettings({ ...settings, apiKey: e.target.value });
                   }}
                   placeholder="Enter your Tavus API key"
                   className="bg-white/80 border-pink-200 text-gray-800 focus:border-pink-400 focus:ring-pink-400 rounded-xl"

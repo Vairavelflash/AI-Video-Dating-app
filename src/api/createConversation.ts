@@ -18,7 +18,7 @@ export const createConversation = async (
   console.log('Persona ID:', settings.persona);
   
   // Validate persona ID
-  const personaId = settings.persona || "pd43ffef";
+  const personaId = settings.persona || settings.menPersonaId || settings.womenPersonaId;
   if (!personaId || personaId.trim() === '') {
     throw new Error('Persona ID is required. Please enter a valid persona ID from your Tavus account.');
   }

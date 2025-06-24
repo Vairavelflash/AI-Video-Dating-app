@@ -1,59 +1,87 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAtom } from "jotai";
-import { userAtom } from "@/store/auth";
-import { Heart, Mail, Lock, AlertCircle } from "lucide-react";
+import { Heart, Mail, Lock, User, AlertCircle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 
-export const LoginPage: React.FC = () => {
+export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
-  const [, setUser] = useAtom(userAtom);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: ""
+  });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    setError("");
-    
-    if (!email || !password) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const validateForm = () => {
+    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
       setError("Please fill in all fields");
-      return;
+      return false;
     }
     
-    if (!email.includes("@")) {
+    if (!formData.email.includes("@")) {
       setError("Please enter a valid email address");
-      return;
+      return false;
     }
+    
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSignup = async () => {
+    setError("");
+    setSuccess("");
+    
+    if (!validateForm()) return;
     
     setIsLoading(true);
     
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Sign up with Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            username: formData.username,
+          }
+        }
       });
 
-      if (signInError) {
-        throw signInError;
+      if (signUpError) {
+        throw signUpError;
       }
 
       if (data.user) {
-        // Set user data in store
-        setUser({
-          id: data.user.id,
-          email: data.user.email!,
-          username: data.user.user_metadata?.username || data.user.email!.split('@')[0],
-          created_at: data.user.created_at,
-        });
-        
-        navigate("/personas");
+        setSuccess("Account created successfully! Please check your email to verify your account.");
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000);
       }
     } catch (error: any) {
-      setError(error.message || "Failed to sign in");
+      setError(error.message || "Failed to create account");
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +89,7 @@ export const LoginPage: React.FC = () => {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleLogin();
+      handleSignup();
     }
   };
 
@@ -99,7 +127,7 @@ export const LoginPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Login Form */}
+      {/* Signup Form */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -118,10 +146,10 @@ export const LoginPage: React.FC = () => {
               <Heart className="size-7 text-white" />
             </motion.div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent" style={{ fontFamily: 'Playfair Display, serif' }}>
-              Welcome Back
+              Join LoveChat AI
             </h1>
             <p className="text-gray-600 mt-2" style={{ fontFamily: 'Inter, sans-serif' }}>
-              Sign in to continue your dating practice
+              Create your account to start practicing
             </p>
           </div>
 
@@ -137,8 +165,38 @@ export const LoginPage: React.FC = () => {
             </motion.div>
           )}
 
+          {/* Success Message */}
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2 text-green-700"
+            >
+              <CheckCircle className="size-4 flex-shrink-0" />
+              <span className="text-sm">{success}</span>
+            </motion.div>
+          )}
+
           {/* Form */}
           <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>
+                Username
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 size-5 text-gray-400" />
+                <Input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Choose a username"
+                  className="pl-10 h-9 bg-white/70 border-pink-200 rounded-xl focus:border-pink-400 focus:ring-pink-400"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="text-sm font-medium text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>
                 Email Address
@@ -147,8 +205,9 @@ export const LoginPage: React.FC = () => {
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 size-5 text-gray-400" />
                 <Input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
                   placeholder="Enter your email"
                   className="pl-10 h-9 bg-white/70 border-pink-200 rounded-xl focus:border-pink-400 focus:ring-pink-400"
@@ -164,45 +223,64 @@ export const LoginPage: React.FC = () => {
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 size-5 text-gray-400" />
                 <Input
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
-                  placeholder="Enter your password"
+                  placeholder="Create a password"
+                  className="pl-10 h-9 bg-white/70 border-pink-200 rounded-xl focus:border-pink-400 focus:ring-pink-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 size-5 text-gray-400" />
+                <Input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Confirm your password"
                   className="pl-10 h-9 bg-white/70 border-pink-200 rounded-xl focus:border-pink-400 focus:ring-pink-400"
                 />
               </div>
             </div>
 
             <Button
-              onClick={handleLogin}
-              disabled={!email || !password || isLoading}
+              onClick={handleSignup}
+              disabled={isLoading}
               className="w-full h-9 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing In...
+                  Creating Account...
                 </div>
               ) : (
                 <>
                   <Heart className="size-5 mr-2" />
-                  Sign In
+                  Create Account
                 </>
               )}
             </Button>
 
             <div className="text-center">
               <p className="text-sm text-gray-600">
-                Don't have an account?{" "}
-                <Link to="/signup" className="text-pink-600 hover:underline font-medium">
-                  Create one here
+                Already have an account?{" "}
+                <Link to="/login" className="text-pink-600 hover:underline font-medium">
+                  Sign in here
                 </Link>
               </p>
             </div>
 
             <div className="text-center">
               <p className="text-xs text-gray-500">
-                By signing in, you agree to our{" "}
+                By creating an account, you agree to our{" "}
                 <a href="#" className="text-pink-600 hover:underline">Terms of Service</a>
                 {" "}and{" "}
                 <a href="#" className="text-pink-600 hover:underline">Privacy Policy</a>
