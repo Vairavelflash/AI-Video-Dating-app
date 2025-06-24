@@ -9,7 +9,7 @@ import { userAtom } from "@/store/auth";
 import { supabase } from "@/lib/supabase";
 import { Settings as SettingsModal } from "@/screens/Settings";
 import { motion, AnimatePresence } from "framer-motion";
-import toast from "react-hot-toast";
+import { useToast } from "@/hooks/useToast";
 
 export const Header = memo(() => {
   const navigate = useNavigate();
@@ -18,6 +18,7 @@ export const Header = memo(() => {
   const [user, setUser] = useAtom(userAtom);
   const [showSettings, setShowSettings] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { toast } = useToast();
 
   const handleSettings = () => {
     if (!conversation) {
@@ -41,10 +42,18 @@ export const Header = memo(() => {
       setUser(null);
       setShowLogoutModal(false);
       navigate("/login");
-      toast.success("Successfully logged out!");
+      toast({
+        variant: "success",
+        title: "Logged Out",
+        description: "Successfully logged out!",
+      });
     } catch (error) {
       console.error("Error signing out:", error);
-      toast.error("Failed to logout. Please try again.");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to logout. Please try again.",
+      });
     }
   };
 

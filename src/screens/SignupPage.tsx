@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
-import toast from "react-hot-toast";
+import { useToast } from "@/hooks/useToast";
 
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +18,7 @@ export const SignupPage: React.FC = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -77,7 +78,11 @@ export const SignupPage: React.FC = () => {
 
       if (data.user) {
         setSuccess("Account created successfully! Please check your email to verify your account.");
-        toast.success("Account created successfully! Please check your email to verify your account.");
+        toast({
+          variant: "success",
+          title: "Account Created!",
+          description: "Please check your email to verify your account.",
+        });
         setTimeout(() => {
           navigate("/login");
         }, 2000);
@@ -85,7 +90,11 @@ export const SignupPage: React.FC = () => {
     } catch (error: any) {
       const errorMessage = error.message || "Failed to create account";
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Signup Failed",
+        description: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
