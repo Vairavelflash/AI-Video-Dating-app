@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAtom, useAtomValue } from "jotai";
 import { selectedPersonaAtom } from "@/store/persona";
 import { settingsAtom } from "@/store/settings";
 import { userAtom } from "@/store/auth";
+import { conversationAtom } from "@/store/conversation";
 import { Heart, Calendar, Sparkles, Clock, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { VideoCallInterface } from "@/components/VideoCallInterface";
 
 interface Persona {
   id: string;
@@ -80,10 +81,11 @@ const personas: Persona[] = [
 
 export const PersonaSelection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"men" | "women">("men");
-  const navigate = useNavigate();
   const [, setSelectedPersona] = useAtom(selectedPersonaAtom);
   const [settings] = useAtom(settingsAtom);
   const user = useAtomValue(userAtom);
+  const [conversation] = useAtom(conversationAtom);
+  const [showVideoCall, setShowVideoCall] = useState(false);
 
   const currentPersonas = personas.filter(p => 
     activeTab === "men" ? p.gender === "male" : p.gender === "female"
@@ -107,12 +109,21 @@ export const PersonaSelection: React.FC = () => {
       replicaId: replicaId?.trim() || ""
     });
     
-    // Open video call in new tab
-    const videoCallUrl = `/video-call?persona=${persona.id}&gender=${persona.gender}`;
-    window.open(videoCallUrl, '_blank');
+    // Show video call interface in the same page
+    setShowVideoCall(true);
+  };
+
+  const handleBackToSelection = () => {
+    setShowVideoCall(false);
+    setSelectedPersona(null);
   };
 
   const hasPersonaId = activeTab === "men" ? settings.menPersonaId : settings.womenPersonaId;
+
+  // If video call is active, show the video call interface
+  if (showVideoCall) {
+    return <VideoCallInterface onBack={handleBackToSelection} />;
+  }
 
   return (
     <div className="flex-1 w-full max-w-6xl mx-auto px-2 flex flex-col min-h-0">
@@ -287,7 +298,7 @@ export const PersonaSelection: React.FC = () => {
         className="flex justify-center py-6"
       >
         <a
-          href="https://github.com/Tavus-Engineering/tavus-vibecode-quickstart"
+          href="https://github.com/Vairavelflash/AI-Video-Dating-app"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 px-6 py-3 bg-white/70 backdrop-blur-sm rounded-full border border-pink-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-gray-700 hover:text-pink-600"

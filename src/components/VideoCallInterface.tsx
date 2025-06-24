@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAtom, useAtomValue } from "jotai";
 import { selectedPersonaAtom } from "@/store/persona";
 import { conversationAtom } from "@/store/conversation";
@@ -20,7 +19,7 @@ import {
   VideoOffIcon,
   PhoneIcon,
   AlertCircle,
-  Home,
+  ArrowLeft,
   Heart,
   Clock
 } from "lucide-react";
@@ -57,34 +56,14 @@ const initialTodos: TodoItem[] = [
   { id: "5", text: "Practice active listening", completed: false },
 ];
 
-// Persona data (same as PersonaSelection)
-const personas = [
-  {
-    id: "1",
-    name: "Alex",
-    age: 28,
-    interests: ["Photography", "Hiking", "Cooking"],
-    image: "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=400",
-    gender: "male"
-  },
-  {
-    id: "4",
-    name: "Sofia",
-    age: 26,
-    interests: ["Art", "Yoga", "Reading"],
-    image: "https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=400",
-    gender: "female"
-  }
-];
-
 const CALL_DURATION = 2 * 60; // 2 minutes in seconds
 
-export const VideoCallPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const personaId = searchParams.get('persona');
-  const gender = searchParams.get('gender') as 'male' | 'female';
-  
+interface VideoCallInterfaceProps {
+  onBack: () => void;
+}
+
+export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }) => {
+  const selectedPersona = useAtomValue(selectedPersonaAtom);
   const [conversation, setConversation] = useAtom(conversationAtom);
   const [settings] = useAtom(settingsAtom);
   const user = useAtomValue(userAtom);
@@ -104,9 +83,6 @@ export const VideoCallPage: React.FC = () => {
   const isCameraEnabled = !localVideo.isOff;
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
-
-  // Find the selected persona
-  const selectedPersona = personas.find(p => p.id === personaId);
 
   // Timer effect
   useEffect(() => {
@@ -136,12 +112,12 @@ export const VideoCallPage: React.FC = () => {
 
   useEffect(() => {
     if (!selectedPersona) {
-      navigate('/personas');
+      onBack();
       return;
     }
 
     if (!user) {
-      navigate('/login');
+      onBack();
       return;
     }
 
@@ -177,7 +153,7 @@ export const VideoCallPage: React.FC = () => {
     
     try {
       // Get the correct persona ID based on gender
-      const personaIdToUse = gender === 'male' ? settings.menPersonaId : settings.womenPersonaId;
+      const personaIdToUse = selectedPersona.gender === 'male' ? settings.menPersonaId : settings.womenPersonaId;
       
       if (!personaIdToUse) {
         throw new Error('Persona ID not configured for this gender');
@@ -217,11 +193,6 @@ export const VideoCallPage: React.FC = () => {
       setConnectionError('Failed to join the video call');
       toast.error('Failed to join the video call');
     }
-  };
-
-  const handleGoHome = () => {
-    // Close this tab and focus on the main tab
-    window.close();
   };
 
   const handleRetry = () => {
@@ -287,45 +258,34 @@ export const VideoCallPage: React.FC = () => {
       setIsConnecting(false);
       setCallStarted(false);
       
-      // Close this tab
-      window.close();
+      // Go back to persona selection
+      onBack();
     } catch (error) {
       console.error("Error ending call:", error);
       toast.error("Error ending call");
-      // Still close the tab even if there's an error
-      window.close();
+      // Still go back even if there's an error
+      onBack();
     }
-  }, [daily, conversation, settings.apiKey, setConversation]);
+  }, [daily, conversation, settings.apiKey, setConversation, onBack]);
 
   if (!selectedPersona) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Persona not found</p>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50">
-      {/* Header */}
-      <header className="flex items-center justify-between p-4 bg-white/70 backdrop-blur-sm border-b border-pink-200">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl shadow-lg">
-            <Heart className="size-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-pink-600" style={{ fontFamily: 'Playfair Display, serif' }}>
-              LoveChat AI
-            </h1>
-            {user && (
-              <p className="text-sm text-gray-600">
-                {user.username} • Video Call with {selectedPersona.name}
-              </p>
-            )}
-          </div>
-        </div>
+    <div className="flex-1 w-full mx-auto relative h-full px-6">
+      {/* Header with Back Button and Timer */}
+      <div className="flex items-center justify-between mb-4">
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className="flex items-center gap-2 bg-white/70 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
+        >
+          <ArrowLeft className="size-4" />
+          Back to Selection
+        </Button>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           {/* Timer */}
           {callStarted && (
             <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-pink-200 rounded-full px-4 py-2">
@@ -336,6 +296,7 @@ export const VideoCallPage: React.FC = () => {
             </div>
           )}
           
+          {/* Sidebar Toggle */}
           <Button
             variant="outline"
             size="icon"
@@ -344,25 +305,16 @@ export const VideoCallPage: React.FC = () => {
           >
             {sidebarOpen ? <X className="size-4" /> : <Menu className="size-4" />}
           </Button>
-          
-          <Button
-            variant="outline"
-            onClick={handleGoHome}
-            className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50 shadow-lg"
-          >
-            <Home className="size-4 mr-2" />
-            Close
-          </Button>
         </div>
-      </header>
+      </div>
 
-      <div className="flex h-[calc(100vh-80px)]">
+      <div className="flex gap-6 h-[calc(100%-80px)]">
         {/* Main Video Area */}
         <div className={cn(
           "transition-all duration-300 relative",
-          sidebarOpen ? "flex-1 mr-80" : "flex-1"
+          sidebarOpen ? "flex-1 lg:mr-80" : "flex-1"
         )}>
-          <div className="bg-white/70 backdrop-blur-sm rounded-3xl border border-pink-200 shadow-xl h-full overflow-hidden m-4">
+          <div className="bg-white/70 backdrop-blur-sm rounded-3xl border border-pink-200 shadow-xl h-full overflow-hidden">
             
             {/* Persona Info - ABOVE the video */}
             <div className="p-6 border-b border-pink-200/50">
@@ -490,7 +442,7 @@ export const VideoCallPage: React.FC = () => {
           </div>
 
           {/* End Call Button - Bottom Center */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
             <Button
               onClick={leaveConversation}
               className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 font-medium"
@@ -501,7 +453,7 @@ export const VideoCallPage: React.FC = () => {
           </div>
         </div>
 
-        {/* To-Do Sidebar */}
+        {/* Flirt List Sidebar - Slides in/out smoothly */}
         <motion.div 
           initial={false}
           animate={{ 
@@ -513,17 +465,23 @@ export const VideoCallPage: React.FC = () => {
             stiffness: 300, 
             damping: 30 
           }}
-          className="fixed top-20 right-0 h-[calc(100vh-80px)] w-80 bg-white/95 backdrop-blur-sm border-l border-pink-200 shadow-2xl z-40"
+          className="fixed lg:absolute top-0 right-0 h-full w-80 bg-white/95 backdrop-blur-sm border-l border-pink-200 shadow-2xl z-40 rounded-l-3xl"
+          style={{ 
+            marginTop: '1rem', 
+            marginRight: '1rem', 
+            marginLeft: '1rem',
+            height: 'calc(100% - 2rem)' 
+          }}
         >
-          <div className="p-6 h-full">
+          <div className="p-6 h-full flex flex-col">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Playfair Display, serif' }}>
-                Conversation Goals
+                Flirt List
               </h2>
             </div>
 
-            {/* Todo List */}
-            <div className="space-y-3 mb-6 overflow-y-auto" style={{ height: 'calc(100% - 200px)' }}>
+            {/* Todo List - Takes up most of the space */}
+            <div className="flex-1 space-y-3 mb-6 overflow-y-auto">
               {todos.map((todo) => (
                 <motion.div
                   key={todo.id}
@@ -550,28 +508,36 @@ export const VideoCallPage: React.FC = () => {
               ))}
             </div>
 
-            {/* Add Todo */}
-            <div className="mt-auto">
-              <div className="flex gap-2">
-                <Input
-                  value={newTodo}
-                  onChange={(e) => setNewTodo(e.target.value)}
-                  placeholder="Add a new goal..."
-                  className="flex-1 bg-white/80 border-pink-200 focus:border-pink-400 rounded-2xl"
-                  onKeyPress={(e) => e.key === 'Enter' && addTodo()}
-                />
-                <Button
-                  onClick={addTodo}
-                  size="icon"
-                  className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl"
-                >
-                  <Plus className="size-4" />
-                </Button>
-              </div>
+            {/* Add Todo - Fixed at the bottom with equal height components */}
+            <div className="flex gap-2">
+              <Input
+                value={newTodo}
+                onChange={(e) => setNewTodo(e.target.value)}
+                placeholder="Add a new task..."
+                className="flex-1 bg-white/80 border-pink-200 focus:border-pink-400 rounded-2xl h-12"
+                onKeyPress={(e) => e.key === 'Enter' && addTodo()}
+              />
+              <Button
+                onClick={addTodo}
+                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl h-12 w-12 p-0 flex items-center justify-center"
+              >
+                <Plus className="size-4" />
+              </Button>
             </div>
           </div>
         </motion.div>
       </div>
+
+      {/* Sidebar Overlay for Mobile */}
+      {sidebarOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       <DailyAudio />
     </div>

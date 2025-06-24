@@ -7,7 +7,6 @@ import { Header } from "./components/Header";
 import { LoginPage } from "./screens/LoginPage";
 import { SignupPage } from "./screens/SignupPage";
 import { PersonaSelection } from "./screens/PersonaSelection";
-import { VideoCallPage } from "./screens/VideoCallPage";
 import { Toaster } from "react-hot-toast";
 
 function App() {
@@ -52,9 +51,6 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          
-          {/* Video call route - accessible without header */}
-          <Route path="/video-call" element={<VideoCallPage />} />
           
           {/* Protected routes with header */}
           <Route path="/personas" element={
