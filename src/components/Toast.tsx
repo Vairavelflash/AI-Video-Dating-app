@@ -117,3 +117,7 @@ export {
   ToastClose,
   ToastAction,
 };
+
+export { Toast }
+
+export { ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport }
