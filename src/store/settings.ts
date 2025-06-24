@@ -20,12 +20,16 @@ const getInitialSettings = (): Settings => {
   if (savedSettings) {
     const parsed = JSON.parse(savedSettings);
     return {
-      ...parsed,
-      apiKey: parsed.apiKey || import.meta.env.VITE_TAVUS_API_KEY || "",
-      menPersonaId: parsed.menPersonaId || import.meta.env.VITE_MALE_PERSONA_ID || "",
-      womenPersonaId: parsed.womenPersonaId || import.meta.env.VITE_FEMALE_PERSONA_ID || "",
-      menReplicaId: parsed.menReplicaId || import.meta.env.VITE_MALE_REPLICA_ID || "",
-      womenReplicaId: parsed.womenReplicaId || import.meta.env.VITE_FEMALE_REPLICA_ID || "",
+      name: parsed.name || "",
+      language: parsed.language || "en",
+      interruptSensitivity: parsed.interruptSensitivity || "medium",
+      persona: parsed.persona || "",
+      replica: parsed.replica || "",
+      apiKey: parsed.apiKey || "",
+      menPersonaId: parsed.menPersonaId || "pd43ffef", // Default persona ID
+      womenPersonaId: parsed.womenPersonaId || "pd43ffef", // Default persona ID
+      menReplicaId: parsed.menReplicaId || "",
+      womenReplicaId: parsed.womenReplicaId || "",
     };
   }
   return {
@@ -34,13 +38,16 @@ const getInitialSettings = (): Settings => {
     interruptSensitivity: "medium",
     persona: "",
     replica: "",
-    apiKey: import.meta.env.VITE_TAVUS_API_KEY || "",
-    menPersonaId: import.meta.env.VITE_MALE_PERSONA_ID || "",
-    womenPersonaId: import.meta.env.VITE_FEMALE_PERSONA_ID || "",
-    menReplicaId: import.meta.env.VITE_MALE_REPLICA_ID || "",
-    womenReplicaId: import.meta.env.VITE_FEMALE_REPLICA_ID || "",
+    apiKey: "",
+    menPersonaId: "pd43ffef", // Default persona ID
+    womenPersonaId: "pd43ffef", // Default persona ID
+    menReplicaId: "",
+    womenReplicaId: "",
   };
 };
+
+// Helper atom to trigger settings updates
+const settingsUpdateTriggerAtom = atom(0);
 
 // Derived atom that updates name from user data
 export const settingsAtom = atom<Settings>(
@@ -64,8 +71,5 @@ export const settingsAtom = atom<Settings>(
     set(settingsUpdateTriggerAtom, Date.now());
   }
 );
-
-// Helper atom to trigger settings updates
-const settingsUpdateTriggerAtom = atom(0);
 
 export const settingsSavedAtom = atom<boolean>(false);

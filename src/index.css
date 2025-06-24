@@ -96,3 +96,13 @@ input::placeholder {
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: rgba(236, 72, 153, 0.5);
 }
+
+/* Poppins font for headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Inter font for body text */
+p, span, div, input, button {
+  font-family: 'Inter', sans-serif;
+}

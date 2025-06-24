@@ -38,6 +38,7 @@ import {
   useParticipantIds,
   useVideoTrack,
   useAudioTrack,
+  useDailyEvent,
 } from "@daily-co/daily-react";
 import Video from "@/components/Video";
 import { endConversation } from "@/api/endConversation";
@@ -85,6 +86,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
   const [timeRemaining, setTimeRemaining] = useState(CALL_DURATION);
   const [callStarted, setCallStarted] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -93,6 +95,26 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
   const isCameraEnabled = !localVideo.isOff;
   const isMicEnabled = !localAudio.isOff;
   const remoteParticipantIds = useParticipantIds({ filter: "remote" });
+
+  // Initialize camera for hair check
+  useEffect(() => {
+    if (currentScreen === "haircheck" && daily && !cameraReady) {
+      const initializeCamera = async () => {
+        try {
+          await daily.startCamera({
+            startVideoOff: false,
+            startAudioOff: true,
+          });
+          setCameraReady(true);
+        } catch (error) {
+          console.error("Failed to initialize camera:", error);
+          setConnectionError("Failed to access camera. Please check permissions.");
+          setCurrentScreen("error");
+        }
+      };
+      initializeCamera();
+    }
+  }, [currentScreen, daily, cameraReady]);
 
   // Timer effect
   useEffect(() => {
@@ -167,6 +189,12 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
       if (!personaIdToUse) {
         throw new Error('Persona ID not configured for this gender');
       }
+
+      // Update settings with the selected persona
+      const updatedSettings = {
+        ...settings,
+        persona: personaIdToUse,
+      };
 
       const newConversation = await createConversation(settings.apiKey);
       setConversation(newConversation);
@@ -363,7 +391,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
               />
             </div>
 
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
               Ready to Chat with {selectedPersona.name}?
             </h1>
             
@@ -429,7 +457,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
             className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-pink-200/50 max-w-4xl w-full"
           >
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+              <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 Hair Check & Camera Setup
               </h2>
               <p className="text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -441,7 +469,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
               {/* Local Video Preview */}
               <div className="relative">
                 <div className="aspect-video bg-gradient-to-br from-pink-100 to-purple-100 rounded-2xl overflow-hidden border-4 border-pink-200">
-                  {localSessionId ? (
+                  {localSessionId && cameraReady ? (
                     <Video
                       id={localSessionId}
                       className="size-full"
@@ -450,8 +478,17 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
-                        <Camera className="size-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">Camera not detected</p>
+                        {!cameraReady ? (
+                          <>
+                            <l-quantum size="45" speed="1.75" color="#ec4899"></l-quantum>
+                            <p className="text-gray-600 mt-4">Initializing camera...</p>
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="size-12 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-600">Camera not detected</p>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -463,24 +500,26 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                     size="icon"
                     variant="outline"
                     onClick={toggleVideo}
+                    disabled={!cameraReady}
                     className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
                   >
                     {!isCameraEnabled ? (
-                      <VideoOffIcon className="size-5" />
+                      <VideoOffIcon className="size-5 text-gray-800" />
                     ) : (
-                      <VideoIcon className="size-5" />
+                      <VideoIcon className="size-5 text-gray-800" />
                     )}
                   </Button>
                   <Button
                     size="icon"
                     variant="outline"
                     onClick={toggleAudio}
+                    disabled={!cameraReady}
                     className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
                   >
                     {!isMicEnabled ? (
-                      <MicOffIcon className="size-5" />
+                      <MicOffIcon className="size-5 text-gray-800" />
                     ) : (
-                      <MicIcon className="size-5" />
+                      <MicIcon className="size-5 text-gray-800" />
                     )}
                   </Button>
                 </div>
@@ -492,7 +531,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm">1</div>
                     <div>
-                      <h3 className="font-semibold text-gray-800">Check Your Camera</h3>
+                      <h3 className="font-semibold text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>Check Your Camera</h3>
                       <p className="text-gray-600 text-sm">Make sure you're well-lit and centered in the frame</p>
                     </div>
                   </div>
@@ -500,7 +539,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm">2</div>
                     <div>
-                      <h3 className="font-semibold text-gray-800">Test Your Microphone</h3>
+                      <h3 className="font-semibold text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>Test Your Microphone</h3>
                       <p className="text-gray-600 text-sm">Speak clearly and ensure your mic is working</p>
                     </div>
                   </div>
@@ -508,7 +547,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm">3</div>
                     <div>
-                      <h3 className="font-semibold text-gray-800">Get Comfortable</h3>
+                      <h3 className="font-semibold text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>Get Comfortable</h3>
                       <p className="text-gray-600 text-sm">Relax and be yourself - this is practice!</p>
                     </div>
                   </div>
@@ -516,7 +555,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
 
                 <Button
                   onClick={startConversation}
-                  disabled={isConnecting}
+                  disabled={isConnecting || !cameraReady}
                   className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white py-4 rounded-2xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                   {isConnecting ? (
@@ -565,7 +604,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
               <AlertCircle className="size-8 text-red-500" />
             </div>
             
-            <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
               Oops! Something went wrong
             </h2>
             
@@ -611,7 +650,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
               <Heart className="size-8 text-green-500" />
             </div>
             
-            <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
               Great conversation!
             </h2>
             
@@ -621,7 +660,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
             </p>
 
             <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl p-6 mb-8">
-              <h3 className="font-semibold text-gray-800 mb-4">Call Summary</h3>
+              <h3 className="font-semibold text-gray-800 mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>Call Summary</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Duration:</span>
@@ -722,7 +761,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                   />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-1" style={{ fontFamily: 'Playfair Display, serif' }}>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     {selectedPersona.name}
                   </h2>
                   <div className="flex items-center gap-2 text-gray-600 mb-2">
@@ -796,9 +835,9 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                     className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
                   >
                     {!isMicEnabled ? (
-                      <MicOffIcon className="size-5" />
+                      <MicOffIcon className="size-5 text-gray-800" />
                     ) : (
-                      <MicIcon className="size-5" />
+                      <MicIcon className="size-5 text-gray-800" />
                     )}
                   </Button>
                   <Button
@@ -808,9 +847,9 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                     className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
                   >
                     {!isCameraEnabled ? (
-                      <VideoOffIcon className="size-5" />
+                      <VideoOffIcon className="size-5 text-gray-800" />
                     ) : (
-                      <VideoIcon className="size-5" />
+                      <VideoIcon className="size-5 text-gray-800" />
                     )}
                   </Button>
                 </div>
@@ -852,7 +891,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
             >
               <div className="p-6 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Playfair Display, serif' }}>
+                  <h2 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     Flirt List
                   </h2>
                 </div>
