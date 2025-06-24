@@ -21,12 +21,16 @@ import {
   AlertCircle,
   ArrowLeft,
   Heart,
-  Clock
+  Clock,
+  Play,
+  Camera,
+  Home,
+  RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   DailyAudio,
   useDaily,
@@ -38,7 +42,7 @@ import {
 import Video from "@/components/Video";
 import { endConversation } from "@/api/endConversation";
 import { quantum } from 'ldrs';
-import toast from "react-hot-toast";
+import { useToast } from "@/hooks/useToast";
 
 quantum.register();
 
@@ -58,6 +62,8 @@ const initialTodos: TodoItem[] = [
 
 const CALL_DURATION = 2 * 60; // 2 minutes in seconds
 
+type CallScreen = "intro" | "haircheck" | "conversation" | "closing" | "error";
+
 interface VideoCallInterfaceProps {
   onBack: () => void;
 }
@@ -67,6 +73,9 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
   const [conversation, setConversation] = useAtom(conversationAtom);
   const [settings] = useAtom(settingsAtom);
   const user = useAtomValue(userAtom);
+  const { toast } = useToast();
+  
+  const [currentScreen, setCurrentScreen] = useState<CallScreen>("intro");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [todos, setTodos] = useState<TodoItem[]>(initialTodos);
   const [newTodo, setNewTodo] = useState("");
@@ -75,6 +84,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(CALL_DURATION);
   const [callStarted, setCallStarted] = useState(false);
+  const [callEnded, setCallEnded] = useState(false);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -86,14 +96,18 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
 
   // Timer effect
   useEffect(() => {
-    if (!callStarted || !isConnected) return;
+    if (!callStarted || !isConnected || currentScreen !== "conversation") return;
 
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           // Time's up - end the call
-          toast.error("Call time limit reached!");
-          leaveConversation();
+          toast({
+            variant: "destructive",
+            title: "Call Ended",
+            description: "Call time limit reached!",
+          });
+          handleCallEnd();
           return 0;
         }
         return prev - 1;
@@ -101,7 +115,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [callStarted, isConnected]);
+  }, [callStarted, isConnected, currentScreen]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -120,31 +134,26 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
       onBack();
       return;
     }
-
-    if (!conversation) {
-      startConversation();
-    }
   }, [selectedPersona, user]);
 
   useEffect(() => {
-    if (conversation?.conversation_url && !isConnected) {
-      connectToCall();
-    }
-  }, [conversation?.conversation_url]);
-
-  useEffect(() => {
-    if (remoteParticipantIds.length > 0 && !callStarted) {
+    if (remoteParticipantIds.length > 0 && !callStarted && currentScreen === "conversation") {
       setIsConnected(true);
       setIsConnecting(false);
       setConnectionError(null);
       setCallStarted(true);
-      toast.success("Call connected! You have 2 minutes.");
+      toast({
+        variant: "success",
+        title: "Call Connected",
+        description: "You have 2 minutes to chat!",
+      });
     }
-  }, [remoteParticipantIds, callStarted]);
+  }, [remoteParticipantIds, callStarted, currentScreen]);
 
   const startConversation = async () => {
     if (!selectedPersona || !settings.apiKey) {
       setConnectionError('API key not configured. Please check settings.');
+      setCurrentScreen("error");
       return;
     }
 
@@ -159,17 +168,26 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
         throw new Error('Persona ID not configured for this gender');
       }
 
-      // Update settings with the selected persona
-      const updatedSettings = {
-        ...settings,
-        persona: personaIdToUse,
-      };
-
       const newConversation = await createConversation(settings.apiKey);
       setConversation(newConversation);
+      
+      toast({
+        variant: "success",
+        title: "Conversation Created",
+        description: "Connecting to video call...",
+      });
+      
+      setCurrentScreen("conversation");
     } catch (error) {
       console.error("Failed to create conversation:", error);
-      setConnectionError(error instanceof Error ? error.message : 'Failed to create conversation');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create conversation';
+      setConnectionError(errorMessage);
+      setCurrentScreen("error");
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: errorMessage,
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -190,15 +208,81 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
     } catch (error) {
       console.error("Failed to join call:", error);
       setIsConnecting(false);
-      setConnectionError('Failed to join the video call');
-      toast.error('Failed to join the video call');
+      const errorMessage = 'Failed to join the video call';
+      setConnectionError(errorMessage);
+      setCurrentScreen("error");
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: errorMessage,
+      });
     }
   };
+
+  useEffect(() => {
+    if (conversation?.conversation_url && currentScreen === "conversation") {
+      connectToCall();
+    }
+  }, [conversation?.conversation_url, currentScreen]);
+
+  const handleCallEnd = useCallback(async () => {
+    try {
+      // Properly end the call and cut all connections
+      if (daily) {
+        daily.setLocalVideo(false);
+        daily.setLocalAudio(false);
+        daily.leave();
+        daily.destroy();
+      }
+      
+      // End conversation via API
+      if (conversation?.conversation_id && settings.apiKey) {
+        await endConversation(settings.apiKey, conversation.conversation_id);
+      }
+      
+      // Clear conversation state
+      setConversation(null);
+      setIsConnected(false);
+      setIsConnecting(false);
+      setCallStarted(false);
+      setCallEnded(true);
+      
+      // Show closing screen
+      setCurrentScreen("closing");
+      
+      toast({
+        variant: "success",
+        title: "Call Ended",
+        description: "Thanks for practicing!",
+      });
+    } catch (error) {
+      console.error("Error ending call:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Error ending call",
+      });
+      // Still show closing screen even if there's an error
+      setCurrentScreen("closing");
+    }
+  }, [daily, conversation, settings.apiKey, setConversation]);
 
   const handleRetry = () => {
     setConnectionError(null);
     setConversation(null);
-    startConversation();
+    setCurrentScreen("intro");
+  };
+
+  const handleHome = () => {
+    // Clean up any existing call
+    if (daily) {
+      daily.setLocalVideo(false);
+      daily.setLocalAudio(false);
+      daily.leave();
+      daily.destroy();
+    }
+    setConversation(null);
+    onBack();
   };
 
   const toggleTodo = (id: string) => {
@@ -224,7 +308,11 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
       daily?.setLocalVideo(!isCameraEnabled);
     } catch (error) {
       console.error("Error toggling video:", error);
-      toast.error("Failed to toggle video");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to toggle video",
+      });
     }
   }, [daily, isCameraEnabled]);
 
@@ -233,56 +321,363 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
       daily?.setLocalAudio(!isMicEnabled);
     } catch (error) {
       console.error("Error toggling audio:", error);
-      toast.error("Failed to toggle audio");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to toggle audio",
+      });
     }
   }, [daily, isMicEnabled]);
-
-  const leaveConversation = useCallback(async () => {
-    try {
-      // Properly end the call and cut all connections
-      if (daily) {
-        daily.setLocalVideo(false);
-        daily.setLocalAudio(false);
-        daily.leave();
-        daily.destroy();
-      }
-      
-      // End conversation via API
-      if (conversation?.conversation_id && settings.apiKey) {
-        await endConversation(settings.apiKey, conversation.conversation_id);
-      }
-      
-      // Clear conversation state
-      setConversation(null);
-      setIsConnected(false);
-      setIsConnecting(false);
-      setCallStarted(false);
-      
-      // Go back to persona selection
-      onBack();
-    } catch (error) {
-      console.error("Error ending call:", error);
-      toast.error("Error ending call");
-      // Still go back even if there's an error
-      onBack();
-    }
-  }, [daily, conversation, settings.apiKey, setConversation, onBack]);
 
   if (!selectedPersona) {
     return null;
   }
 
+  // Intro Screen
+  if (currentScreen === "intro") {
+    return (
+      <div className="flex-1 w-full mx-auto relative h-full px-6">
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="outline"
+            onClick={onBack}
+            className="flex items-center gap-2 bg-white/70 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
+          >
+            <ArrowLeft className="size-4" />
+            Back to Selection
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-center h-[calc(100%-80px)]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white/80 backdrop-blur-lg rounded-3xl p-12 shadow-2xl border border-pink-200/50 max-w-2xl w-full text-center"
+          >
+            {/* Replica GIF placeholder */}
+            <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-6 border-4 border-pink-200">
+              <img
+                src={selectedPersona.image}
+                alt={selectedPersona.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+              Ready to Chat with {selectedPersona.name}?
+            </h1>
+            
+            <p className="text-gray-600 text-lg mb-8 max-w-lg mx-auto" style={{ fontFamily: 'Inter, sans-serif' }}>
+              This is a two-way video experience where you can practice real dating conversations. 
+              {selectedPersona.name} will respond naturally to everything you say!
+            </p>
+
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="flex items-center gap-2 text-gray-600">
+                <Calendar className="size-5" />
+                <span>{selectedPersona.age} years old</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Clock className="size-5" />
+                <span>2 minute session</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-2 mb-8">
+              {selectedPersona.interests.map((interest, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-gradient-to-r from-pink-100 to-purple-100 text-pink-700 rounded-full text-sm font-medium border border-pink-200"
+                >
+                  {interest}
+                </span>
+              ))}
+            </div>
+
+            <Button
+              onClick={() => setCurrentScreen("haircheck")}
+              className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-8 py-4 rounded-2xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
+            >
+              <Play className="size-6 mr-3" />
+              Start Video Experience
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // Hair Check Screen
+  if (currentScreen === "haircheck") {
+    return (
+      <div className="flex-1 w-full mx-auto relative h-full px-6">
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentScreen("intro")}
+            className="flex items-center gap-2 bg-white/70 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
+          >
+            <ArrowLeft className="size-4" />
+            Back
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-center h-[calc(100%-80px)]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-pink-200/50 max-w-4xl w-full"
+          >
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+                Hair Check & Camera Setup
+              </h2>
+              <p className="text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+                Make sure you look great before starting your conversation with {selectedPersona.name}!
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              {/* Local Video Preview */}
+              <div className="relative">
+                <div className="aspect-video bg-gradient-to-br from-pink-100 to-purple-100 rounded-2xl overflow-hidden border-4 border-pink-200">
+                  {localSessionId ? (
+                    <Video
+                      id={localSessionId}
+                      className="size-full"
+                      tileClassName="!object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Camera className="size-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600">Camera not detected</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Camera Controls */}
+                <div className="flex justify-center gap-3 mt-4">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={toggleVideo}
+                    className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
+                  >
+                    {!isCameraEnabled ? (
+                      <VideoOffIcon className="size-5" />
+                    ) : (
+                      <VideoIcon className="size-5" />
+                    )}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={toggleAudio}
+                    className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
+                  >
+                    {!isMicEnabled ? (
+                      <MicOffIcon className="size-5" />
+                    ) : (
+                      <MicIcon className="size-5" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm">1</div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Check Your Camera</h3>
+                      <p className="text-gray-600 text-sm">Make sure you're well-lit and centered in the frame</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm">2</div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Test Your Microphone</h3>
+                      <p className="text-gray-600 text-sm">Speak clearly and ensure your mic is working</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm">3</div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Get Comfortable</h3>
+                      <p className="text-gray-600 text-sm">Relax and be yourself - this is practice!</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={startConversation}
+                  disabled={isConnecting}
+                  className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white py-4 rounded-2xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  {isConnecting ? (
+                    <div className="flex items-center gap-2">
+                      <l-quantum size="20" speed="1.75" color="white"></l-quantum>
+                      Connecting...
+                    </div>
+                  ) : (
+                    <>
+                      <Heart className="size-5 mr-2" />
+                      Start Conversation
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+        <DailyAudio />
+      </div>
+    );
+  }
+
+  // Error Screen
+  if (currentScreen === "error") {
+    return (
+      <div className="flex-1 w-full mx-auto relative h-full px-6">
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="outline"
+            onClick={onBack}
+            className="flex items-center gap-2 bg-white/70 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
+          >
+            <ArrowLeft className="size-4" />
+            Back to Selection
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-center h-[calc(100%-80px)]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white/80 backdrop-blur-lg rounded-3xl p-12 shadow-2xl border border-red-200/50 max-w-2xl w-full text-center"
+          >
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="size-8 text-red-500" />
+            </div>
+            
+            <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+              Oops! Something went wrong
+            </h2>
+            
+            <p className="text-gray-600 mb-8 max-w-lg mx-auto" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {connectionError || "We encountered an unexpected error. Don't worry, it happens to the best of us!"}
+            </p>
+
+            <div className="flex gap-4 justify-center">
+              <Button
+                onClick={handleRetry}
+                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-6 py-3 rounded-2xl font-medium"
+              >
+                <RotateCcw className="size-5 mr-2" />
+                Try Again
+              </Button>
+              
+              <Button
+                onClick={handleHome}
+                variant="outline"
+                className="border-pink-200 hover:bg-pink-50 px-6 py-3 rounded-2xl"
+              >
+                <Home className="size-5 mr-2" />
+                Go Home
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // Closing Screen
+  if (currentScreen === "closing") {
+    return (
+      <div className="flex-1 w-full mx-auto relative h-full px-6">
+        <div className="flex items-center justify-center h-full">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white/80 backdrop-blur-lg rounded-3xl p-12 shadow-2xl border border-pink-200/50 max-w-2xl w-full text-center"
+          >
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Heart className="size-8 text-green-500" />
+            </div>
+            
+            <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+              Great conversation!
+            </h2>
+            
+            <p className="text-gray-600 mb-8 max-w-lg mx-auto" style={{ fontFamily: 'Inter, sans-serif' }}>
+              You just completed a 2-minute practice session with {selectedPersona.name}. 
+              Every conversation makes you more confident for the real thing!
+            </p>
+
+            <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl p-6 mb-8">
+              <h3 className="font-semibold text-gray-800 mb-4">Call Summary</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Duration:</span>
+                  <p className="font-medium">2:00 minutes</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Partner:</span>
+                  <p className="font-medium">{selectedPersona.name}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Completed Tasks:</span>
+                  <p className="font-medium">{todos.filter(t => t.completed).length}/{todos.length}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600">Status:</span>
+                  <p className="font-medium text-green-600">Completed</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 justify-center">
+              <Button
+                onClick={handleRetry}
+                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-6 py-3 rounded-2xl font-medium"
+              >
+                <RotateCcw className="size-5 mr-2" />
+                Try Again
+              </Button>
+              
+              <Button
+                onClick={handleHome}
+                variant="outline"
+                className="border-pink-200 hover:bg-pink-50 px-6 py-3 rounded-2xl"
+              >
+                <Home className="size-5 mr-2" />
+                Home
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // Conversation Screen (existing implementation)
   return (
     <div className="flex-1 w-full mx-auto relative h-full px-6">
       {/* Header with Back Button and Timer */}
       <div className="flex items-center justify-between mb-4">
         <Button
           variant="outline"
-          onClick={onBack}
+          onClick={handleHome}
           className="flex items-center gap-2 bg-white/70 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
         >
           <ArrowLeft className="size-4" />
-          Back to Selection
+          End Call
         </Button>
         
         <div className="flex items-center gap-4">
@@ -354,25 +749,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
 
             {/* Tavus AI Video Player */}
             <div className="relative flex-1 bg-gradient-to-br from-pink-100 to-purple-100" style={{ height: 'calc(100% - 140px)' }}>
-              {connectionError ? (
-                <div className="flex h-full items-center justify-center p-8">
-                  <div className="text-center max-w-md">
-                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <AlertCircle className="size-8 text-red-500" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Connection Failed</h3>
-                    <p className="text-gray-600 mb-6 text-sm leading-relaxed">{connectionError}</p>
-                    <div className="flex flex-col gap-3">
-                      <Button
-                        onClick={handleRetry}
-                        className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : isConnecting ? (
+              {isConnecting ? (
                 <div className="flex h-full items-center justify-center">
                   <div className="text-center">
                     <l-quantum size="45" speed="1.75" color="#ec4899"></l-quantum>
@@ -401,7 +778,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
               )}
 
               {/* Local Video - Bottom Right */}
-              {localSessionId && !connectionError && (
+              {localSessionId && (
                 <Video
                   id={localSessionId}
                   tileClassName="!object-cover"
@@ -410,7 +787,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
               )}
 
               {/* Video Controls - Bottom Center */}
-              {isConnected && !connectionError && (
+              {isConnected && (
                 <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex gap-3">
                   <Button
                     size="icon"
@@ -444,7 +821,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
           {/* End Call Button - Bottom Center */}
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
             <Button
-              onClick={leaveConversation}
+              onClick={handleCallEnd}
               className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 font-medium"
             >
               <PhoneIcon className="size-6 rotate-[135deg]" />
@@ -454,90 +831,94 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
         </div>
 
         {/* Flirt List Sidebar - Slides in/out smoothly */}
-        <motion.div 
-          initial={false}
-          animate={{ 
-            x: sidebarOpen ? 0 : "100%",
-            opacity: sidebarOpen ? 1 : 0
-          }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 300, 
-            damping: 30 
-          }}
-          className="fixed lg:absolute top-0 right-0 h-full w-80 bg-white/95 backdrop-blur-sm border-l border-pink-200 shadow-2xl z-40 rounded-l-3xl"
-          style={{ 
-            marginTop: '1rem', 
-            marginRight: '1rem', 
-            marginLeft: '1rem',
-            height: 'calc(100% - 2rem)' 
-          }}
-        >
-          <div className="p-6 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Playfair Display, serif' }}>
-                Flirt List
-              </h2>
-            </div>
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div 
+              initial={{ x: "100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 300, 
+                damping: 30 
+              }}
+              className="fixed lg:absolute top-0 right-0 h-full w-80 bg-white/95 backdrop-blur-sm border-l border-pink-200 shadow-2xl z-40 rounded-l-3xl"
+              style={{ 
+                marginTop: '1rem', 
+                marginRight: '1rem', 
+                marginLeft: '1rem',
+                height: 'calc(100% - 2rem)' 
+              }}
+            >
+              <div className="p-6 h-full flex flex-col">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Playfair Display, serif' }}>
+                    Flirt List
+                  </h2>
+                </div>
 
-            {/* Todo List - Takes up most of the space */}
-            <div className="flex-1 space-y-3 mb-6 overflow-y-auto">
-              {todos.map((todo) => (
-                <motion.div
-                  key={todo.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  onClick={() => toggleTodo(todo.id)}
-                  className="flex items-center gap-3 p-3 rounded-2xl hover:bg-pink-50 transition-colors duration-200 cursor-pointer group border border-pink-100 bg-white/70 shadow-sm"
-                >
-                  {todo.completed ? (
-                    <CheckSquare className="size-5 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <Square className="size-5 text-gray-400 group-hover:text-pink-500 flex-shrink-0 transition-colors duration-200" />
-                  )}
-                  <span
-                    className={cn(
-                      "text-gray-700 transition-all duration-200",
-                      todo.completed && "line-through text-green-600"
-                    )}
-                    style={{ fontFamily: 'Inter, sans-serif' }}
+                {/* Todo List - Takes up most of the space */}
+                <div className="flex-1 space-y-3 mb-6 overflow-y-auto">
+                  {todos.map((todo) => (
+                    <motion.div
+                      key={todo.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      onClick={() => toggleTodo(todo.id)}
+                      className="flex items-center gap-3 p-3 rounded-2xl hover:bg-pink-50 transition-colors duration-200 cursor-pointer group border border-pink-100 bg-white/70 shadow-sm"
+                    >
+                      {todo.completed ? (
+                        <CheckSquare className="size-5 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <Square className="size-5 text-gray-400 group-hover:text-pink-500 flex-shrink-0 transition-colors duration-200" />
+                      )}
+                      <span
+                        className={cn(
+                          "text-gray-700 transition-all duration-200",
+                          todo.completed && "line-through text-green-600"
+                        )}
+                        style={{ fontFamily: 'Inter, sans-serif' }}
+                      >
+                        {todo.text}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Add Todo - Fixed at the bottom with equal height components */}
+                <div className="flex gap-2">
+                  <Input
+                    value={newTodo}
+                    onChange={(e) => setNewTodo(e.target.value)}
+                    placeholder="Add a new task..."
+                    className="flex-1 bg-white/80 border-pink-200 focus:border-pink-400 rounded-2xl h-12"
+                    onKeyPress={(e) => e.key === 'Enter' && addTodo()}
+                  />
+                  <Button
+                    onClick={addTodo}
+                    className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl h-12 w-12 p-0 flex items-center justify-center"
                   >
-                    {todo.text}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Add Todo - Fixed at the bottom with equal height components */}
-            <div className="flex gap-2">
-              <Input
-                value={newTodo}
-                onChange={(e) => setNewTodo(e.target.value)}
-                placeholder="Add a new task..."
-                className="flex-1 bg-white/80 border-pink-200 focus:border-pink-400 rounded-2xl h-12"
-                onKeyPress={(e) => e.key === 'Enter' && addTodo()}
-              />
-              <Button
-                onClick={addTodo}
-                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl h-12 w-12 p-0 flex items-center justify-center"
-              >
-                <Plus className="size-4" />
-              </Button>
-            </div>
-          </div>
-        </motion.div>
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Sidebar Overlay for Mobile */}
-      {sidebarOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <DailyAudio />
     </div>

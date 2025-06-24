@@ -1,7 +1,7 @@
 import { IConversation } from "@/types";
 import { settingsAtom } from "@/store/settings";
 import { getDefaultStore } from "jotai";
-import toast from "react-hot-toast";
+import { useToast } from "@/hooks/useToast";
 
 export const createConversation = async (
   token: string,
@@ -81,12 +81,9 @@ export const createConversation = async (
     }
 
     const data = await response.json();
-    toast.success("Conversation created successfully!");
     return data;
   } catch (error) {
     console.error('Error creating conversation:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-    toast.error(errorMessage);
     throw error;
   }
 };

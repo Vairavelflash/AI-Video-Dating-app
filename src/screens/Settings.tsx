@@ -5,7 +5,7 @@ import { getDefaultStore } from "jotai";
 import { settingsAtom, settingsSavedAtom } from "@/store/settings";
 import { X, Sparkles, Heart } from "lucide-react";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { useToast } from "@/hooks/useToast";
 
 // Button Component
 const Button = React.forwardRef<
@@ -94,6 +94,7 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
   const [settings, setSettings] = useAtom(settingsAtom);
   const [, setSettingsSaved] = useAtom(settingsSavedAtom);
+  const { toast } = useToast();
 
   const languages = [
     { label: "English", value: "en" },
@@ -137,11 +138,19 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
       console.log('Settings in store after save:', storeSettings);
       
       setSettingsSaved(true);
-      toast.success("Settings saved successfully!");
+      toast({
+        variant: "success",
+        title: "Settings Saved",
+        description: "Your settings have been saved successfully!",
+      });
       onClose();
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error("Failed to save settings. Please try again.");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+      });
     }
   };
 
