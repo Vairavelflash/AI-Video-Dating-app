@@ -1,3 +1,5 @@
+import toast from "react-hot-toast";
+
 export const endConversation = async (
   token: string,
   conversationId: string,
@@ -17,9 +19,12 @@ export const endConversation = async (
       throw new Error("Failed to end conversation");
     }
 
+    toast.success("Conversation ended successfully!");
     return null;
   } catch (error) {
     console.error("Error:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to end conversation';
+    toast.error(errorMessage);
     throw error;
   }
 };

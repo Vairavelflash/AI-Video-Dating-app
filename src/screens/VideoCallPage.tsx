@@ -20,7 +20,9 @@ import {
   VideoOffIcon,
   PhoneIcon,
   AlertCircle,
-  Home,Heart
+  Home,
+  Heart,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,7 @@ import {
 import Video from "@/components/Video";
 import { endConversation } from "@/api/endConversation";
 import { quantum } from 'ldrs';
+import toast from "react-hot-toast";
 
 quantum.register();
 
@@ -74,6 +77,8 @@ const personas = [
   }
 ];
 
+const CALL_DURATION = 2 * 60; // 2 minutes in seconds
+
 export const VideoCallPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -89,6 +94,8 @@ export const VideoCallPage: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState(CALL_DURATION);
+  const [callStarted, setCallStarted] = useState(false);
 
   const daily = useDaily();
   const localSessionId = useLocalSessionId();
@@ -100,6 +107,32 @@ export const VideoCallPage: React.FC = () => {
 
   // Find the selected persona
   const selectedPersona = personas.find(p => p.id === personaId);
+
+  // Timer effect
+  useEffect(() => {
+    if (!callStarted || !isConnected) return;
+
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          // Time's up - end the call
+          toast.error("Call time limit reached!");
+          leaveConversation();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [callStarted, isConnected]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (!selectedPersona) {
@@ -124,15 +157,20 @@ export const VideoCallPage: React.FC = () => {
   }, [conversation?.conversation_url]);
 
   useEffect(() => {
-    if (remoteParticipantIds.length > 0) {
+    if (remoteParticipantIds.length > 0 && !callStarted) {
       setIsConnected(true);
       setIsConnecting(false);
       setConnectionError(null);
+      setCallStarted(true);
+      toast.success("Call connected! You have 2 minutes.");
     }
-  }, [remoteParticipantIds]);
+  }, [remoteParticipantIds, callStarted]);
 
   const startConversation = async () => {
-    if (!selectedPersona || !settings.apiKey) return;
+    if (!selectedPersona || !settings.apiKey) {
+      setConnectionError('API key not configured. Please check settings.');
+      return;
+    }
 
     setIsConnecting(true);
     setConnectionError(null);
@@ -144,6 +182,12 @@ export const VideoCallPage: React.FC = () => {
       if (!personaIdToUse) {
         throw new Error('Persona ID not configured for this gender');
       }
+
+      // Update settings with the selected persona
+      const updatedSettings = {
+        ...settings,
+        persona: personaIdToUse,
+      };
 
       const newConversation = await createConversation(settings.apiKey);
       setConversation(newConversation);
@@ -171,6 +215,7 @@ export const VideoCallPage: React.FC = () => {
       console.error("Failed to join call:", error);
       setIsConnecting(false);
       setConnectionError('Failed to join the video call');
+      toast.error('Failed to join the video call');
     }
   };
 
@@ -204,42 +249,52 @@ export const VideoCallPage: React.FC = () => {
   };
 
   const toggleVideo = useCallback(() => {
-    daily?.setLocalVideo(!isCameraEnabled);
+    try {
+      daily?.setLocalVideo(!isCameraEnabled);
+    } catch (error) {
+      console.error("Error toggling video:", error);
+      toast.error("Failed to toggle video");
+    }
   }, [daily, isCameraEnabled]);
 
   const toggleAudio = useCallback(() => {
-    daily?.setLocalAudio(!isMicEnabled);
+    try {
+      daily?.setLocalAudio(!isMicEnabled);
+    } catch (error) {
+      console.error("Error toggling audio:", error);
+      toast.error("Failed to toggle audio");
+    }
   }, [daily, isMicEnabled]);
 
   const leaveConversation = useCallback(async () => {
-    // Properly end the call and cut all connections
-    if (daily) {
-      try {
+    try {
+      // Properly end the call and cut all connections
+      if (daily) {
         daily.setLocalVideo(false);
         daily.setLocalAudio(false);
         daily.leave();
         daily.destroy();
-      } catch (error) {
-        console.error("Error ending call:", error);
       }
-    }
-    
-    // End conversation via API
-    if (conversation?.conversation_id && settings.apiKey) {
-      try {
+      
+      // End conversation via API
+      if (conversation?.conversation_id && settings.apiKey) {
         await endConversation(settings.apiKey, conversation.conversation_id);
-      } catch (error) {
-        console.error("Error ending conversation via API:", error);
       }
+      
+      // Clear conversation state
+      setConversation(null);
+      setIsConnected(false);
+      setIsConnecting(false);
+      setCallStarted(false);
+      
+      // Close this tab
+      window.close();
+    } catch (error) {
+      console.error("Error ending call:", error);
+      toast.error("Error ending call");
+      // Still close the tab even if there's an error
+      window.close();
     }
-    
-    // Clear conversation state
-    setConversation(null);
-    setIsConnected(false);
-    setIsConnecting(false);
-    
-    // Close this tab
-    window.close();
   }, [daily, conversation, settings.apiKey, setConversation]);
 
   if (!selectedPersona) {
@@ -271,6 +326,16 @@ export const VideoCallPage: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Timer */}
+          {callStarted && (
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-pink-200 rounded-full px-4 py-2">
+              <Clock className="size-4 text-pink-600" />
+              <span className="font-mono text-sm font-medium text-gray-700">
+                {formatTime(timeRemaining)}
+              </span>
+            </div>
+          )}
+          
           <Button
             variant="outline"
             size="icon"

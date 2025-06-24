@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -76,12 +77,15 @@ export const SignupPage: React.FC = () => {
 
       if (data.user) {
         setSuccess("Account created successfully! Please check your email to verify your account.");
+        toast.success("Account created successfully! Please check your email to verify your account.");
         setTimeout(() => {
           navigate("/login");
         }, 2000);
       }
     } catch (error: any) {
-      setError(error.message || "Failed to create account");
+      const errorMessage = error.message || "Failed to create account";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

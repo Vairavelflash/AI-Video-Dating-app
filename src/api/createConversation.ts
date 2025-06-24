@@ -1,44 +1,45 @@
 import { IConversation } from "@/types";
 import { settingsAtom } from "@/store/settings";
 import { getDefaultStore } from "jotai";
+import toast from "react-hot-toast";
 
 export const createConversation = async (
   token: string,
 ): Promise<IConversation> => {
-  // Validate token
-  if (!token || token.trim() === '') {
-    throw new Error('API token is required. Please enter your Tavus API key.');
-  }
-
-  // Get settings from Jotai store
-  const settings = getDefaultStore().get(settingsAtom);
-  
-  // Add debug logs
-  console.log('Creating conversation with settings:', settings);
-  console.log('Persona ID:', settings.persona);
-  
-  // Validate persona ID
-  const personaId = settings.persona || settings.menPersonaId || settings.womenPersonaId;
-  if (!personaId || personaId.trim() === '') {
-    throw new Error('Persona ID is required. Please enter a valid persona ID from your Tavus account.');
-  }
-  
-  // Build the context string
-  let contextString = "";
-  if (settings.name && settings.name.trim() !== '') {
-    contextString = `You are talking with the user, ${settings.name}. `;
-  }
-  contextString += `You are an AI persona for dating practice conversations. Be friendly, engaging, and help the user practice their dating conversation skills.`;
-  
-  const payload = {
-    persona_id: personaId,
-    custom_greeting: "Hey there! I'm excited to chat with you today. How are you doing?",
-    conversational_context: contextString.trim()
-  };
-  
-  console.log('Sending payload to API:', payload);
-  
   try {
+    // Validate token
+    if (!token || token.trim() === '') {
+      throw new Error('API token is required. Please enter your Tavus API key.');
+    }
+
+    // Get settings from Jotai store
+    const settings = getDefaultStore().get(settingsAtom);
+    
+    // Add debug logs
+    console.log('Creating conversation with settings:', settings);
+    console.log('Persona ID:', settings.persona);
+    
+    // Validate persona ID
+    const personaId = settings.persona || settings.menPersonaId || settings.womenPersonaId;
+    if (!personaId || personaId.trim() === '') {
+      throw new Error('Persona ID is required. Please enter a valid persona ID from your Tavus account.');
+    }
+    
+    // Build the context string
+    let contextString = "";
+    if (settings.name && settings.name.trim() !== '') {
+      contextString = `You are talking with the user, ${settings.name}. `;
+    }
+    contextString += `You are an AI persona for dating practice conversations. Be friendly, engaging, and help the user practice their dating conversation skills.`;
+    
+    const payload = {
+      persona_id: personaId,
+      custom_greeting: "Hey there! I'm excited to chat with you today. How are you doing?",
+      conversational_context: contextString.trim()
+    };
+    
+    console.log('Sending payload to API:', payload);
+    
     const response = await fetch("https://tavusapi.com/v2/conversations", {
       method: "POST",
       headers: {
@@ -80,9 +81,12 @@ export const createConversation = async (
     }
 
     const data = await response.json();
+    toast.success("Conversation created successfully!");
     return data;
   } catch (error) {
     console.error('Error creating conversation:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    toast.error(errorMessage);
     throw error;
   }
 };

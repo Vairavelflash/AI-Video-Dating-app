@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -50,10 +51,13 @@ export const LoginPage: React.FC = () => {
           created_at: data.user.created_at,
         });
         
+        toast.success(`Welcome back, ${data.user.user_metadata?.username || data.user.email!.split('@')[0]}!`);
         navigate("/personas");
       }
     } catch (error: any) {
-      setError(error.message || "Failed to sign in");
+      const errorMessage = error.message || "Failed to sign in";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
