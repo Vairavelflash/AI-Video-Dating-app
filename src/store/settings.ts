@@ -6,8 +6,6 @@ interface Settings {
   name: string;
   language: string;
   interruptSensitivity: string;
-  persona: string;
-  replica: string;
   menPersonaId: string;
   womenPersonaId: string;
   menReplicaId: string;
@@ -23,26 +21,22 @@ const getInitialSettings = (): Settings => {
       name: parsed.name || "",
       language: parsed.language || "en",
       interruptSensitivity: parsed.interruptSensitivity || "medium",
-      persona: parsed.persona || "",
-      replica: parsed.replica || "",
-      apiKey: parsed.apiKey || "",
-      menPersonaId: parsed.menPersonaId || "pd43ffef", // Default persona ID
-      womenPersonaId: parsed.womenPersonaId || "pd43ffef", // Default persona ID
-      menReplicaId: parsed.menReplicaId || "",
-      womenReplicaId: parsed.womenReplicaId || "",
+      apiKey: parsed.apiKey || "c1de42cbbffa4bdcbf7e090f0904f52c",
+      menPersonaId: parsed.menPersonaId || "pf82089ab8bb",
+      womenPersonaId: parsed.womenPersonaId || "pbafdaca72e0",
+      menReplicaId: parsed.menReplicaId || "rfe12d8b9597",
+      womenReplicaId: parsed.womenReplicaId || "r8086c29d9b7",
     };
   }
   return {
     name: "",
     language: "en",
     interruptSensitivity: "medium",
-    persona: "",
-    replica: "",
-    apiKey: "",
-    menPersonaId: "pd43ffef", // Default persona ID
-    womenPersonaId: "pd43ffef", // Default persona ID
-    menReplicaId: "",
-    womenReplicaId: "",
+    apiKey: "c1de42cbbffa4bdcbf7e090f0904f52c",
+    menPersonaId: "pf82089ab8bb",
+    womenPersonaId: "pbafdaca72e0",
+    menReplicaId: "rfe12d8b9597",
+    womenReplicaId: "r8086c29d9b7",
   };
 };
 

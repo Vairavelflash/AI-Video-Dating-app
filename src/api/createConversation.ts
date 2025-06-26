@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/useToast";
 
 export const createConversation = async (
   token: string,
+  personaId: string,
 ): Promise<IConversation> => {
   try {
     // Validate token
@@ -12,18 +13,17 @@ export const createConversation = async (
       throw new Error('API token is required. Please enter your Tavus API key.');
     }
 
+    // Validate persona ID
+    if (!personaId || personaId.trim() === '') {
+      throw new Error('Persona ID is required. Please enter a valid persona ID from your Tavus account.');
+    }
+
     // Get settings from Jotai store
     const settings = getDefaultStore().get(settingsAtom);
     
     // Add debug logs
     console.log('Creating conversation with settings:', settings);
-    console.log('Persona ID:', settings.persona);
-    
-    // Validate persona ID
-    const personaId = settings.persona || settings.menPersonaId || settings.womenPersonaId;
-    if (!personaId || personaId.trim() === '') {
-      throw new Error('Persona ID is required. Please enter a valid persona ID from your Tavus account.');
-    }
+    console.log('Using Persona ID:', personaId);
     
     // Build the context string
     let contextString = "";
@@ -33,7 +33,7 @@ export const createConversation = async (
     contextString += `You are an AI persona for dating practice conversations. Be friendly, engaging, and help the user practice their dating conversation skills.`;
     
     const payload = {
-      persona_id: personaId,
+      persona_id: personaId.trim(),
       custom_greeting: "Hey there! I'm excited to chat with you today. How are you doing?",
       conversational_context: contextString.trim()
     };

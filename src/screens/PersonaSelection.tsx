@@ -134,7 +134,7 @@ export const PersonaSelection: React.FC = () => {
         transition={{ duration: 0.6 }}
         className="text-center mb-8"
       >
-        <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-rose-600 bg-clip-text text-transparent mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+        <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-rose-600 bg-clip-text text-transparent mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
           Choose Your Practice Partner
         </h1>
         <p className="text-gray-600 text-lg max-w-2xl mx-auto" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -241,7 +241,7 @@ export const PersonaSelection: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-1" style={{ fontFamily: 'Playfair Display, serif' }}>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
                     {persona.name}
                   </h3>
                   <div className="flex items-center gap-2 text-gray-600">

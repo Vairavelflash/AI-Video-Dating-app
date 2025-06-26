@@ -190,13 +190,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
         throw new Error('Persona ID not configured for this gender');
       }
 
-      // Update settings with the selected persona
-      const updatedSettings = {
-        ...settings,
-        persona: personaIdToUse,
-      };
-
-      const newConversation = await createConversation(settings.apiKey);
+      const newConversation = await createConversation(settings.apiKey, personaIdToUse);
       setConversation(newConversation);
       
       toast({
