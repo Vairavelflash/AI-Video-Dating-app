@@ -158,7 +158,7 @@ export const SignupPage: React.FC = () => {
             >
               <Heart className="size-7 text-white" />
             </motion.div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent" style={{ fontFamily: 'Playfair Display, serif' }}>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent" style={{ fontFamily: 'Poppins, sans-serif' }}>
               Join LoveChat AI
             </h1>
             <p className="text-gray-600 mt-2" style={{ fontFamily: 'Inter, sans-serif' }}>

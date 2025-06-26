@@ -1,6 +1,5 @@
 import { atom } from "jotai";
 import { userAtom } from "./auth";
-import { getDefaultStore } from "jotai";
 
 interface Settings {
   name: string;
@@ -40,14 +39,14 @@ const getInitialSettings = (): Settings => {
   };
 };
 
-// Helper atom to trigger settings updates
-const settingsUpdateTriggerAtom = atom(0);
+// Create a base atom that holds the actual settings value
+const baseSettingsAtom = atom<Settings>(getInitialSettings());
 
-// Derived atom that updates name from user data
+// Derived atom that updates name from user data and handles localStorage sync
 export const settingsAtom = atom<Settings>(
   (get) => {
     const user = get(userAtom);
-    const settings = getInitialSettings();
+    const settings = get(baseSettingsAtom);
     
     // If user is logged in and settings name is empty, use username
     if (user && !settings.name) {
@@ -60,10 +59,18 @@ export const settingsAtom = atom<Settings>(
     return settings;
   },
   (get, set, newSettings: Settings) => {
+    // Save to localStorage
     localStorage.setItem('tavus-settings', JSON.stringify(newSettings));
-    // Force re-evaluation by updating a dummy atom
-    set(settingsUpdateTriggerAtom, Date.now());
+    
+    // Update the base atom to trigger re-renders
+    set(baseSettingsAtom, newSettings);
   }
 );
+
+// Atom to listen for localStorage changes and update settings
+export const syncSettingsFromStorageAtom = atom(null, (get, set) => {
+  const updatedSettings = getInitialSettings();
+  set(baseSettingsAtom, updatedSettings);
+});
 
 export const settingsSavedAtom = atom<boolean>(false);

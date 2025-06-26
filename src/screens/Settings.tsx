@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { cn } from "@/utils";
 import { useAtom } from "jotai";
-import { getDefaultStore } from "jotai";
-import { settingsAtom, settingsSavedAtom } from "@/store/settings";
+import { settingsAtom, settingsSavedAtom, syncSettingsFromStorageAtom } from "@/store/settings";
 import { X, Sparkles, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/useToast";
@@ -94,7 +93,13 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
   const [settings, setSettings] = useAtom(settingsAtom);
   const [, setSettingsSaved] = useAtom(settingsSavedAtom);
+  const [, syncSettings] = useAtom(syncSettingsFromStorageAtom);
   const { toast } = useToast();
+
+  // Sync settings from localStorage on component mount
+  useEffect(() => {
+    syncSettings();
+  }, [syncSettings]);
 
   const languages = [
     { label: "English", value: "en" },
@@ -113,29 +118,13 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
 
   const handleSave = async () => {
     try {
-      console.log('Current settings before save:', settings);
+      console.log('Saving settings:', settings);
       
-      // Create a new settings object to ensure we have a fresh reference
-      const updatedSettings = {
-        ...settings,
-      };
-      
-      // Save to localStorage
-      localStorage.setItem('tavus-settings', JSON.stringify(updatedSettings));
-      
-      // Update the store with the new settings object
-      const store = getDefaultStore();
-      store.set(settingsAtom, updatedSettings);
+      // Update the settings atom (this will save to localStorage)
+      setSettings(settings);
       
       // Wait a moment to ensure the store is updated
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Check both localStorage and store
-      const storedSettings = localStorage.getItem('tavus-settings');
-      const storeSettings = store.get(settingsAtom);
-      
-      console.log('Settings in localStorage:', JSON.parse(storedSettings || '{}'));
-      console.log('Settings in store after save:', storeSettings);
       
       setSettingsSaved(true);
       toast({
@@ -177,7 +166,7 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
               <Sparkles className="size-7 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-800" style={{ fontFamily: 'Playfair Display, serif' }}>
+              <h2 className="text-xl font-bold text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 Settings
               </h2>
               <p className="text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -269,7 +258,7 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
           </div>
 
           <div className="space-y-4 p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl border border-pink-200">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2" style={{ fontFamily: 'Playfair Display, serif' }}>
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
               <Heart className="size-5 text-pink-500" />
               Persona Configuration
             </h3>

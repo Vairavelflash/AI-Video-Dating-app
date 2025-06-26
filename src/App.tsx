@@ -47,10 +47,23 @@ function App() {
   return (
     <Router>
       <main className="flex h-svh flex-col items-center justify-between gap-3 sm:gap-4 bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50">
+        {/* Logo - Top Right on all pages */}
+        <div className="absolute top-4 right-4 z-50">
+          <img
+            src="/images/white_circle_360x360.png"
+            alt="Bolt Logo"
+            className="w-12 h-12 opacity-80 hover:opacity-100 transition-opacity duration-200"
+          />
+        </div>
+
         <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+          {/* Public routes - redirect to personas if authenticated */}
+          <Route path="/login" element={
+            user ? <Navigate to="/personas" replace /> : <LoginPage />
+          } />
+          <Route path="/signup" element={
+            user ? <Navigate to="/personas" replace /> : <SignupPage />
+          } />
           
           {/* Protected routes with header */}
           <Route path="/personas" element={
@@ -64,7 +77,7 @@ function App() {
             )
           } />
           
-          {/* Default redirect */}
+          {/* Default redirect based on auth status */}
           <Route path="/" element={
             user ? <Navigate to="/personas" replace /> : <Navigate to="/login" replace />
           } />
