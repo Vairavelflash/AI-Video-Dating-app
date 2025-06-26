@@ -183,17 +183,16 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
     setConnectionError(null);
     
     try {
-      // Get the correct persona ID based on gender
-      const personaIdToUse = selectedPersona.gender === 'male' ? settings.menPersonaId : settings.womenPersonaId;
-      
-      if (!personaIdToUse) {
-        throw new Error('Persona ID not configured for this gender');
-      }
+      console.log('Starting conversation with:', {
+        personaId: selectedPersona.personaId,
+        replicaId: selectedPersona.replicaId,
+        gender: selectedPersona.gender
+      });
 
-      // Pass the replica ID from the selected persona
+      // Pass the persona and replica IDs from the selected persona
       const newConversation = await createConversation(
         settings.apiKey, 
-        personaIdToUse, 
+        selectedPersona.personaId, 
         selectedPersona.replicaId
       );
       setConversation(newConversation);
@@ -503,9 +502,9 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                     className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
                   >
                     {!isCameraEnabled ? (
-                      <VideoOffIcon className="size-5 text-gray-800" />
+                      <VideoOffIcon className="size-5 text-black" />
                     ) : (
-                      <VideoIcon className="size-5 text-gray-800" />
+                      <VideoIcon className="size-5 text-black" />
                     )}
                   </Button>
                   <Button
@@ -516,9 +515,9 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
                     className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
                   >
                     {!isMicEnabled ? (
-                      <MicOffIcon className="size-5 text-gray-800" />
+                      <MicOffIcon className="size-5 text-black" />
                     ) : (
-                      <MicIcon className="size-5 text-gray-800" />
+                      <MicIcon className="size-5 text-black" />
                     )}
                   </Button>
                 </div>

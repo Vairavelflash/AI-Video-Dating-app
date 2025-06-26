@@ -94,15 +94,16 @@ export const PersonaSelection: React.FC = () => {
   const handlePersonaClick = (persona: Persona) => {
     if (!persona.available) return;
     
-    const personaId = activeTab === "men" ? settings.menPersonaId : settings.womenPersonaId;
-    const replicaId = activeTab === "men" ? settings.menReplicaId : settings.womenReplicaId;
+    // Get the correct persona and replica IDs based on gender
+    const personaId = persona.gender === "male" ? settings.menPersonaId : settings.womenPersonaId;
+    const replicaId = persona.gender === "male" ? settings.menReplicaId : settings.womenReplicaId;
     
     if (!personaId || personaId.trim() === '') {
       alert("Please configure persona IDs in Settings first!");
       return;
     }
 
-    // Update settings with the selected persona ID
+    // Set the selected persona with the correct IDs
     setSelectedPersona({
       ...persona,
       personaId: personaId.trim(),

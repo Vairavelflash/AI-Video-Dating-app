@@ -47,10 +47,10 @@ function App() {
   return (
     <Router>
       <main className="flex h-svh flex-col items-center justify-between gap-3 sm:gap-4 bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50">
-        {/* Logo - Top Right on all pages */}
-        <div className="absolute top-4 right-4 z-50">
+        {/* Logo - Bottom Right on all pages */}
+        <div className="fixed bottom-4 right-4 z-50">
           <img
-            src="/images/white_circle_360x360.png"
+            src="/images/logo.svg"
             alt="Bolt Logo"
             className="w-12 h-12 opacity-80 hover:opacity-100 transition-opacity duration-200"
           />
