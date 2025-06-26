@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 export const endConversation = async (conversationId: string) => {
   try {
     // Get current user session
@@ -8,17 +10,20 @@ export const endConversation = async (conversationId: string) => {
       throw new Error('You must be logged in to end a conversation.');
     }
 
-    // Call the backend edge function
-    const { data, error } = await supabase.functions.invoke('tavus-api', {
-      body: {
-        action: 'end',
-        conversationId
-      }
+    // Call the Express backend
+    const response = await fetch(`${API_URL}/api/tavus/conversation/${conversationId}/end`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
     });
 
-    if (error) {
-      console.error('Backend error:', error);
-      throw new Error(error.message || 'Failed to end conversation');
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Backend error:', data);
+      throw new Error(data.error || 'Failed to end conversation');
     }
 
     return data;

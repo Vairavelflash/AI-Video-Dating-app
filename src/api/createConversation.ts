@@ -3,6 +3,8 @@ import { settingsAtom } from "@/store/settings";
 import { getDefaultStore } from "jotai";
 import { supabase } from "@/lib/supabase";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 export const createConversation = async (
   personaId: string,
   replicaId?: string,
@@ -27,23 +29,25 @@ export const createConversation = async (
     console.log('Using Persona ID:', personaId);
     console.log('Using Replica ID:', replicaId);
     
-    // Call the backend edge function
-    const { data, error } = await supabase.functions.invoke('tavus-api', {
-      body: {
-        action: 'create',
+    // Call the Express backend
+    const response = await fetch(`${API_URL}/api/tavus/conversation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
         personaId: personaId.trim(),
         replicaId: replicaId?.trim(),
         name: settings.name
-      }
+      }),
     });
 
-    if (error) {
-      console.error('Backend error:', error);
-      throw new Error(error.message || 'Failed to create conversation');
-    }
+    const data = await response.json();
 
-    if (!data) {
-      throw new Error('No data received from backend');
+    if (!response.ok) {
+      console.error('Backend error:', data);
+      throw new Error(data.error || 'Failed to create conversation');
     }
 
     return data;
