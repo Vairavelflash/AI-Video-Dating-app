@@ -40,10 +40,7 @@ export const createConversation = async (
       conversational_context: contextString.trim()
     };
 
-    // Include replica_uuid if provided
-    if (replicaId && replicaId.trim() !== '') {
-      payload.replica_uuid = replicaId.trim();
-    }
+    // Note: replica_uuid field removed as it's not supported by the API endpoint
     
     console.log('Sending payload to API:', payload);
     
