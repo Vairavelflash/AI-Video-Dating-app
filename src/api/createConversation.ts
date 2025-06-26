@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/useToast";
 export const createConversation = async (
   token: string,
   personaId: string,
+  replicaId?: string,
 ): Promise<IConversation> => {
   try {
     // Validate token
@@ -24,6 +25,7 @@ export const createConversation = async (
     // Add debug logs
     console.log('Creating conversation with settings:', settings);
     console.log('Using Persona ID:', personaId);
+    console.log('Using Replica ID:', replicaId);
     
     // Build the context string
     let contextString = "";
@@ -32,11 +34,16 @@ export const createConversation = async (
     }
     contextString += `You are an AI persona for dating practice conversations. Be friendly, engaging, and help the user practice their dating conversation skills.`;
     
-    const payload = {
+    const payload: any = {
       persona_id: personaId.trim(),
       custom_greeting: "Hey there! I'm excited to chat with you today. How are you doing?",
       conversational_context: contextString.trim()
     };
+
+    // Include replica_uuid if provided
+    if (replicaId && replicaId.trim() !== '') {
+      payload.replica_uuid = replicaId.trim();
+    }
     
     console.log('Sending payload to API:', payload);
     
@@ -66,6 +73,9 @@ export const createConversation = async (
         }
         if (errorData.message?.includes('Invalid persona_id')) {
           throw new Error(`Invalid Persona ID: The persona ID "${personaId}" does not exist in your Tavus account. Please check your persona ID at https://platform.tavus.io/personas and make sure it's correctly entered.`);
+        }
+        if (errorData.message?.includes('Invalid replica_uuid')) {
+          throw new Error(`Invalid Replica ID: The replica ID "${replicaId}" does not exist in your Tavus account. Please check your replica ID and make sure it's correctly entered.`);
         }
         throw new Error(`Invalid request: Please check your API key and persona ID. ${errorData.message || errorText}`);
       } else if (response.status === 401) {
