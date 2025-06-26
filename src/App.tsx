@@ -50,7 +50,7 @@ function App() {
         {/* Logo - Bottom Right on all pages */}
         <div className="fixed bottom-4 right-4 z-50">
           <img
-            src="/images/logo.svg"
+            src="/images/black_circle_360x360.png"
             alt="Bolt Logo"
             className="w-12 h-12 opacity-80 hover:opacity-100 transition-opacity duration-200"
           />

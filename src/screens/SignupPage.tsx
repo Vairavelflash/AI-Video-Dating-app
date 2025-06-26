@@ -4,7 +4,7 @@ import { Heart, Mail, Lock, User, AlertCircle, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
-import { supabase } from "@/lib/supabase";
+import { signUpUser } from "@/api/auth";
 import { useToast } from "@/hooks/useToast";
 
 export const SignupPage: React.FC = () => {
@@ -61,22 +61,13 @@ export const SignupPage: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Sign up with Supabase Auth
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            username: formData.username,
-          }
-        }
-      });
+      const result = await signUpUser(formData.email, formData.password, formData.username);
 
-      if (signUpError) {
-        throw signUpError;
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      if (data.user) {
+      if (result.user) {
         setSuccess("Account created successfully! Please check your email to verify your account.");
         toast({
           variant: "success",

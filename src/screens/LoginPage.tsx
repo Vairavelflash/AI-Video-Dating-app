@@ -6,7 +6,7 @@ import { Heart, Mail, Lock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
-import { supabase } from "@/lib/supabase";
+import { signInUser } from "@/api/auth";
 import { useToast } from "@/hooks/useToast";
 
 export const LoginPage: React.FC = () => {
@@ -34,28 +34,25 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const result = await signInUser(email, password);
 
-      if (signInError) {
-        throw signInError;
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      if (data.user) {
+      if (result.user) {
         // Set user data in store
         setUser({
-          id: data.user.id,
-          email: data.user.email!,
-          username: data.user.user_metadata?.username || data.user.email!.split('@')[0],
-          created_at: data.user.created_at,
+          id: result.user.id,
+          email: result.user.email!,
+          username: result.user.user_metadata?.username || result.user.email!.split('@')[0],
+          created_at: result.user.created_at,
         });
         
         toast({
           variant: "success",
           title: "Welcome Back!",
-          description: `Welcome back, ${data.user.user_metadata?.username || data.user.email!.split('@')[0]}!`,
+          description: `Welcome back, ${result.user.user_metadata?.username || result.user.email!.split('@')[0]}!`,
         });
         navigate("/personas");
       }

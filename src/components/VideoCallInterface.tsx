@@ -173,8 +173,8 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
   }, [remoteParticipantIds, callStarted, currentScreen]);
 
   const startConversation = async () => {
-    if (!selectedPersona || !settings.apiKey) {
-      setConnectionError('API key not configured. Please check settings.');
+    if (!selectedPersona) {
+      setConnectionError('No persona selected.');
       setCurrentScreen("error");
       return;
     }
@@ -191,7 +191,6 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
 
       // Pass the persona and replica IDs from the selected persona
       const newConversation = await createConversation(
-        settings.apiKey, 
         selectedPersona.personaId, 
         selectedPersona.replicaId
       );
@@ -262,8 +261,8 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
       }
       
       // End conversation via API
-      if (conversation?.conversation_id && settings.apiKey) {
-        await endConversation(settings.apiKey, conversation.conversation_id);
+      if (conversation?.conversation_id) {
+        await endConversation(conversation.conversation_id);
       }
       
       // Clear conversation state
@@ -291,7 +290,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
       // Still show closing screen even if there's an error
       setCurrentScreen("closing");
     }
-  }, [daily, conversation, settings.apiKey, setConversation]);
+  }, [daily, conversation, setConversation]);
 
   const handleRetry = () => {
     setConnectionError(null);
@@ -942,20 +941,20 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
 
-      {/* Sidebar Overlay for Mobile */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+        {/* Sidebar Overlay for Mobile */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+      </div>
 
       <DailyAudio />
     </div>

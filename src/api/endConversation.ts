@@ -1,25 +1,29 @@
-export const endConversation = async (
-  token: string,
-  conversationId: string,
-) => {
-  try {
-    const response = await fetch(
-      `https://tavusapi.com/v2/conversations/${conversationId}/end`,
-      {
-        method: "POST",
-        headers: {
-          "x-api-key": token ?? "",
-        },
-      },
-    );
+import { supabase } from "@/lib/supabase";
 
-    if (!response.ok) {
-      throw new Error("Failed to end conversation");
+export const endConversation = async (conversationId: string) => {
+  try {
+    // Get current user session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('You must be logged in to end a conversation.');
     }
 
-    return null;
+    // Call the backend edge function
+    const { data, error } = await supabase.functions.invoke('tavus-api', {
+      body: {
+        action: 'end',
+        conversationId
+      }
+    });
+
+    if (error) {
+      console.error('Backend error:', error);
+      throw new Error(error.message || 'Failed to end conversation');
+    }
+
+    return data;
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error ending conversation:", error);
     throw error;
   }
 };

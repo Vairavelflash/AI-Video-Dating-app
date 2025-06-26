@@ -9,7 +9,6 @@ interface Settings {
   womenPersonaId: string;
   menReplicaId: string;
   womenReplicaId: string;
-  apiKey: string;
 }
 
 const getInitialSettings = (): Settings => {
@@ -20,7 +19,6 @@ const getInitialSettings = (): Settings => {
       name: parsed.name || "",
       language: parsed.language || "en",
       interruptSensitivity: parsed.interruptSensitivity || "medium",
-      apiKey: parsed.apiKey || "c1de42cbbffa4bdcbf7e090f0904f52c",
       menPersonaId: parsed.menPersonaId || "pf82089ab8bb",
       womenPersonaId: parsed.womenPersonaId || "pbafdaca72e0",
       menReplicaId: parsed.menReplicaId || "rfe12d8b9597",
@@ -31,7 +29,6 @@ const getInitialSettings = (): Settings => {
     name: "",
     language: "en",
     interruptSensitivity: "medium",
-    apiKey: "c1de42cbbffa4bdcbf7e090f0904f52c",
     menPersonaId: "pf82089ab8bb",
     womenPersonaId: "pbafdaca72e0",
     menReplicaId: "rfe12d8b9597",
