@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { supabase } from "@/lib/supabase";
 
 interface AuthResponse {
   user?: any;
@@ -8,21 +8,21 @@ interface AuthResponse {
 
 export const signUpUser = async (email: string, password: string, username: string): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_URL}/api/auth/signup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password, username }),
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username: username,
+        }
+      }
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return { error: data.error || 'Failed to create account' };
+    if (error) {
+      return { error: error.message };
     }
 
-    return { user: data.user };
+    return { user: data.user, session: data.session };
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Unknown error occurred' };
   }
@@ -30,18 +30,13 @@ export const signUpUser = async (email: string, password: string, username: stri
 
 export const signInUser = async (email: string, password: string): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_URL}/api/auth/signin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return { error: data.error || 'Failed to sign in' };
+    if (error) {
+      return { error: error.message };
     }
 
     return { user: data.user, session: data.session };
@@ -52,8 +47,10 @@ export const signInUser = async (email: string, password: string): Promise<AuthR
 
 export const signOutUser = async (): Promise<{ error?: string }> => {
   try {
-    // For now, we'll handle sign out on the frontend only
-    // In a production app, you might want to invalidate tokens on the backend
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      return { error: error.message };
+    }
     return {};
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Unknown error occurred' };

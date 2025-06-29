@@ -7,12 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-interface ConversationRequest {
-  action: 'create' | 'end';
-  personaId: string;
-  replicaId?: string;
-  conversationId?: string;
-  name?: string;
+interface EndConversationRequest {
+  conversationId: string;
 }
 
 serve(async (req) => {
@@ -66,92 +62,50 @@ serve(async (req) => {
       )
     }
 
-    const { action, personaId, replicaId, conversationId, name }: ConversationRequest = await req.json()
+    const { conversationId }: EndConversationRequest = await req.json()
 
-    if (action === 'create') {
-      // Build the context string
-      let contextString = "";
-      if (name && name.trim() !== '') {
-        contextString = `You are talking with the user, ${name}. `;
-      }
-      contextString += `You are an AI persona for dating practice conversations. Be friendly, engaging, and help the user practice their dating conversation skills.`;
-      
-      const payload = {
-        persona_id: personaId,
-        custom_greeting: "Hey there! I'm excited to chat with you today. How are you doing?",
-        conversational_context: contextString.trim()
-      };
-
-      const response = await fetch("https://tavusapi.com/v2/conversations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": tavusApiKey,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        return new Response(
-          JSON.stringify({ error: `Tavus API error: ${errorText}` }),
-          { 
-            status: response.status, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      const data = await response.json();
+    if (!conversationId) {
       return new Response(
-        JSON.stringify(data),
+        JSON.stringify({ error: 'Conversation ID is required' }),
         { 
+          status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
     }
 
-    if (action === 'end' && conversationId) {
-      const response = await fetch(
-        `https://tavusapi.com/v2/conversations/${conversationId}/end`,
-        {
-          method: "POST",
-          headers: {
-            "x-api-key": tavusApiKey,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        return new Response(
-          JSON.stringify({ error: `Tavus API error: ${errorText}` }),
-          { 
-            status: response.status, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
+    const response = await fetch(
+      `https://tavusapi.com/v2/conversations/${conversationId}/end`,
+      {
+        method: "POST",
+        headers: {
+          "x-api-key": tavusApiKey,
+        },
       }
+    );
 
+    if (!response.ok) {
+      const errorText = await response.text();
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ error: `Tavus API error: ${errorText}` }),
         { 
+          status: response.status, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
     }
 
     return new Response(
-      JSON.stringify({ error: 'Invalid action or missing parameters' }),
+      JSON.stringify({ success: true }),
       { 
-        status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     )
 
   } catch (error) {
+    console.error('End conversation error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Failed to end conversation' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
