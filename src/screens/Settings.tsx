@@ -339,7 +339,7 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             <Input
               id="apiKey"
               type="password"
-              value={settings.apiKey || ""}
+              // value={settings?.apiKey || ""}
               onChange={(e) => {
                 setSettings({ ...settings, apiKey: e.target.value });
               }}

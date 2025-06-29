@@ -37,35 +37,35 @@ const getInitialSettings = (): Settings => {
 };
 
 // Create a base atom that holds the actual settings value
-const baseSettingsAtom = atom<Settings>(getInitialSettings());
+const baseSettingsAtom = atom<any>(getInitialSettings());
 
 // Derived atom that updates name from user data and handles localStorage sync
-export const settingsAtom = atom<Settings>(
-  (get) => {
+export const settingsAtom = atom(
+  (get): any => {
     const user = get(userAtom);
     const settings = get(baseSettingsAtom);
-    
-    // If user is logged in and settings name is empty, use username
+
     if (user && !settings.name) {
       return {
         ...settings,
-        name: user.username
+        name: user.username,
       };
     }
-    
+
     return settings;
   },
-  (get, set, newSettings: Settings) => {
-    // Save to localStorage
-    localStorage.setItem('tavus-settings', JSON.stringify(newSettings));
-    
-    // Update the base atom to trigger re-renders
+  (_, set, newSettings: any) => {
+    // Check environment for SSR
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tavus-settings', JSON.stringify(newSettings));
+    }
+
     set(baseSettingsAtom, newSettings);
   }
 );
 
 // Atom to listen for localStorage changes and update settings
-export const syncSettingsFromStorageAtom = atom(null, (get, set) => {
+export const syncSettingsFromStorageAtom = atom(null, (_, set) => {
   const updatedSettings = getInitialSettings();
   set(baseSettingsAtom, updatedSettings);
 });

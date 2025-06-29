@@ -138,22 +138,22 @@ export const VideoCall: React.FC = () => {
     }
   };
 
-  const handleBack = async () => {
-    // End the video call properly
-    if (daily && conversation) {
-      try {
-        daily.leave();
-        daily.destroy();
-        if (token) {
-          await endConversation(token, conversation.conversation_id);
-        }
-      } catch (error) {
-        console.error("Error ending conversation:", error);
-      }
-      setConversation(null);
-    }
-    setScreenState({ currentScreen: "personaSelection" });
-  };
+  // const handleBack = async () => {
+  //   // End the video call properly
+  //   if (daily && conversation) {
+  //     try {
+  //       daily.leave();
+  //       daily.destroy();
+  //       if (token) {
+  //         await endConversation(token, conversation.conversation_id);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error ending conversation:", error);
+  //     }
+  //     setConversation(null);
+  //   }
+  //   setScreenState({ currentScreen: "personaSelection" });
+  // };
 
   const handleRetry = () => {
     setConnectionError(null);
@@ -212,7 +212,7 @@ export const VideoCall: React.FC = () => {
     // End conversation via API
     if (conversation?.conversation_id && token) {
       try {
-        await endConversation(token, conversation.conversation_id);
+        await endConversation(conversation.conversation_id);
       } catch (error) {
         console.error("Error ending conversation via API:", error);
       }

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useAtom } from "jotai";
 import { screenAtom } from "@/store/screens";
-import { conversationAtom } from "@/store/conversation";
 import { settingsAtom } from "@/store/settings";
 import { Heart, Calendar, Sparkles, CheckSquare, Square, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -71,7 +70,7 @@ const initialTodos: TodoItem[] = [
 export const DatingHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"men" | "women">("men");
   const [, setScreenState] = useAtom(screenAtom);
-  const [, setConversation] = useAtom(conversationAtom);
+  // const [, setConversation] = useAtom(conversationAtom);
   const [settings, setSettings] = useAtom(settingsAtom);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [todos, setTodos] = useState<TodoItem[]>(initialTodos);

@@ -3,7 +3,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { selectedPersonaAtom } from "@/store/persona";
 import { settingsAtom } from "@/store/settings";
 import { userAtom } from "@/store/auth";
-import { conversationAtom } from "@/store/conversation";
+// import { conversationAtom } from "@/store/conversation";
 import { Heart, Calendar, Sparkles, Clock, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -84,7 +84,7 @@ export const PersonaSelection: React.FC = () => {
   const [, setSelectedPersona] = useAtom(selectedPersonaAtom);
   const [settings] = useAtom(settingsAtom);
   const user = useAtomValue(userAtom);
-  const [conversation] = useAtom(conversationAtom);
+  // const [conversation] = useAtom(conversationAtom);
   const [showVideoCall, setShowVideoCall] = useState(false);
 
   const currentPersonas = personas.filter(p => 

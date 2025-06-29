@@ -14,7 +14,9 @@ export type Screen =
   | "positiveFeedback"
   | "negativeFeedback"
   | "finalScreen"
-  | "sessionEnded";
+  | "sessionEnded"
+  | "intro"
+  | "datingHome";
 
 interface ScreenState {
   currentScreen: Screen;
