@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { selectedPersonaAtom } from "@/store/persona";
 import { conversationAtom } from "@/store/conversation";
-import { settingsAtom } from "@/store/settings";
 import { userAtom } from "@/store/auth";
 import { createConversation } from "@/api";
 import { 
@@ -38,7 +37,6 @@ import {
   useParticipantIds,
   useVideoTrack,
   useAudioTrack,
-  useDailyEvent,
 } from "@daily-co/daily-react";
 import Video from "@/components/Video";
 import { endConversation } from "@/api/endConversation";
@@ -72,7 +70,6 @@ interface VideoCallInterfaceProps {
 export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }) => {
   const selectedPersona = useAtomValue(selectedPersonaAtom);
   const [conversation, setConversation] = useAtom(conversationAtom);
-  const [settings] = useAtom(settingsAtom);
   const user = useAtomValue(userAtom);
   const { toast } = useToast();
   
@@ -85,7 +82,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(CALL_DURATION);
   const [callStarted, setCallStarted] = useState(false);
-  const [callEnded, setCallEnded] = useState(false);
+  const [, setCallEnded] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
 
   const daily = useDaily();
