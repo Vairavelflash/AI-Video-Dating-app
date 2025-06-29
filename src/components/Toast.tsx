@@ -2,7 +2,6 @@ import React from "react";
 import * as ToastPrimitive from "@radix-ui/react-toast";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 
 const ToastProvider = ToastPrimitive.Provider;
 

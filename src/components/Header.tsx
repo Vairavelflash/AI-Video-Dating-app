@@ -1,8 +1,8 @@
 import { memo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { Settings, Check, Heart, LogOut, User, X } from "lucide-react";
-import { useAtom, useAtomValue } from "jotai";
+import { Settings, Check, Heart, LogOut, User } from "lucide-react";
+import { useAtom } from "jotai";
 import { conversationAtom } from "@/store/conversation";
 import { settingsSavedAtom } from "@/store/settings";
 import { userAtom } from "@/store/auth";
