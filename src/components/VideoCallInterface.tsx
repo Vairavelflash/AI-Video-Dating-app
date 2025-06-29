@@ -6,7 +6,6 @@ import { userAtom } from "@/store/auth";
 import { createConversation } from "@/api";
 import { 
   Calendar, 
-  Sparkles, 
   CheckSquare, 
   Square, 
   Menu, 
