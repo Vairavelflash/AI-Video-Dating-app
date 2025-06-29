@@ -699,15 +699,15 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
     );
   }
 
-  // Conversation Screen (existing implementation)
+  // Conversation Screen - MADE MUCH BIGGER FOR FULL VIEW
   return (
-    <div className="flex-1 w-full mx-auto relative h-full px-6">
-      {/* Header with Back Button and Timer */}
-      <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50">
+      {/* Header - Minimal and floating */}
+      <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between">
         <Button
           variant="outline"
           onClick={handleHome}
-          className="flex items-center gap-2 bg-white/70 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
+          className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50 shadow-lg"
         >
           <ArrowLeft className="size-4" />
           End Call
@@ -716,7 +716,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
         <div className="flex items-center gap-4">
           {/* Timer */}
           {callStarted && (
-            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-pink-200 rounded-full px-4 py-2">
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-pink-200 rounded-full px-4 py-2 shadow-lg">
               <Clock className="size-4 text-pink-600" />
               <span className="font-mono text-sm font-medium text-gray-700">
                 {formatTime(timeRemaining)}
@@ -736,222 +736,194 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({ onBack }
         </div>
       </div>
 
-      <div className="flex gap-6 h-[calc(100%-80px)]">
-        {/* Main Video Area */}
-        <div className={cn(
-          "transition-all duration-300 relative",
-          sidebarOpen ? "flex-1 lg:mr-80" : "flex-1"
-        )}>
-          <div className="bg-white/70 backdrop-blur-sm rounded-3xl border border-pink-200 shadow-xl h-full overflow-hidden">
-            
-            {/* Persona Info - ABOVE the video */}
-            <div className="p-6 border-b border-pink-200/50">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0">
+      {/* Main Video Area - FULL SCREEN */}
+      <div className="absolute inset-0">
+        {/* Persona Info - Floating at top */}
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-40 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-pink-200 max-w-md">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0">
+              <img
+                src={selectedPersona.image}
+                alt={selectedPersona.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                {selectedPersona.name}
+              </h2>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Calendar className="size-3" />
+                <span className="text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>{selectedPersona.age} years old</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Full Screen Video */}
+        <div className="w-full h-full bg-gradient-to-br from-pink-100 to-purple-100">
+          {isConnecting ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <l-quantum size="60" speed="1.75" color="#ec4899"></l-quantum>
+                <p className="mt-6 text-gray-600 text-xl">Connecting to {selectedPersona.name}...</p>
+              </div>
+            </div>
+          ) : remoteParticipantIds?.length > 0 ? (
+            <Video
+              id={remoteParticipantIds[0]}
+              className="size-full"
+              tileClassName="!object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <div className="w-48 h-48 rounded-full overflow-hidden mx-auto mb-6 border-4 border-pink-200">
                   <img
                     src={selectedPersona.image}
                     alt={selectedPersona.name}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                    {selectedPersona.name}
-                  </h2>
-                  <div className="flex items-center gap-2 text-gray-600 mb-2">
-                    <Calendar className="size-4" />
-                    <span style={{ fontFamily: 'Inter, sans-serif' }}>{selectedPersona.age} years old</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="size-4 text-pink-500" />
-                    <div className="flex flex-wrap gap-2">
-                      {selectedPersona.interests.map((interest, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 bg-gradient-to-r from-pink-100 to-purple-100 text-pink-700 rounded-full text-xs font-medium border border-pink-200"
-                          style={{ fontFamily: 'Inter, sans-serif' }}
-                        >
-                          {interest}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <p className="text-gray-600 text-xl">Waiting for {selectedPersona.name} to join...</p>
               </div>
             </div>
-
-            {/* Tavus AI Video Player */}
-            <div className="relative flex-1 bg-gradient-to-br from-pink-100 to-purple-100" style={{ height: 'calc(100% - 140px)' }}>
-              {isConnecting ? (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-center">
-                    <l-quantum size="45" speed="1.75" color="#ec4899"></l-quantum>
-                    <p className="mt-4 text-gray-600">Connecting to {selectedPersona.name}...</p>
-                  </div>
-                </div>
-              ) : remoteParticipantIds?.length > 0 ? (
-                <Video
-                  id={remoteParticipantIds[0]}
-                  className="size-full"
-                  tileClassName="!object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-4 border-4 border-pink-200">
-                      <img
-                        src={selectedPersona.image}
-                        alt={selectedPersona.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <p className="text-gray-600">Waiting for {selectedPersona.name} to join...</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Local Video - Bottom Right */}
-              {localSessionId && (
-                <Video
-                  id={localSessionId}
-                  tileClassName="!object-cover"
-                  className="absolute bottom-20 right-4 aspect-video h-32 w-24 overflow-hidden rounded-lg border-2 border-pink-400 shadow-lg"
-                />
-              )}
-
-              {/* Video Controls - Bottom Center */}
-              {isConnected && (
-                <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex gap-3">
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    onClick={toggleAudio}
-                    className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
-                  >
-                    {!isMicEnabled ? (
-                      <MicOffIcon className="size-5 text-black" />
-                    ) : (
-                      <MicIcon className="size-5 text-black" />
-                    )}
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    onClick={toggleVideo}
-                    className="bg-white/80 backdrop-blur-sm border-pink-200 hover:bg-pink-50"
-                  >
-                    {!isCameraEnabled ? (
-                      <VideoOffIcon className="size-5 text-black" />
-                    ) : (
-                      <VideoIcon className="size-5 text-black" />
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* End Call Button - Bottom Center */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-            <Button
-              onClick={handleCallEnd}
-              className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 font-medium"
-            >
-              <PhoneIcon className="size-6 rotate-[135deg]" />
-              End Call
-            </Button>
-          </div>
-        </div>
-
-        {/* Flirt List Sidebar - Slides in/out smoothly */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.div 
-              initial={{ x: "100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "100%", opacity: 0 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 30 
-              }}
-              className="fixed lg:absolute top-0 right-0 h-full w-80 bg-white/95 backdrop-blur-sm border-l border-pink-200 shadow-2xl z-40 rounded-l-3xl"
-              style={{ 
-                marginTop: '1rem', 
-                marginRight: '1rem', 
-                marginLeft: '1rem',
-                height: 'calc(100% - 2rem)' 
-              }}
-            >
-              <div className="p-6 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                    Flirt List
-                  </h2>
-                </div>
-
-                {/* Todo List - Takes up most of the space */}
-                <div className="flex-1 space-y-3 mb-6 overflow-y-auto">
-                  {todos.map((todo) => (
-                    <motion.div
-                      key={todo.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      onClick={() => toggleTodo(todo.id)}
-                      className="flex items-center gap-3 p-3 rounded-2xl hover:bg-pink-50 transition-colors duration-200 cursor-pointer group border border-pink-100 bg-white/70 shadow-sm"
-                    >
-                      {todo.completed ? (
-                        <CheckSquare className="size-5 text-green-500 flex-shrink-0" />
-                      ) : (
-                        <Square className="size-5 text-gray-400 group-hover:text-pink-500 flex-shrink-0 transition-colors duration-200" />
-                      )}
-                      <span
-                        className={cn(
-                          "text-gray-700 transition-all duration-200",
-                          todo.completed && "line-through text-green-600"
-                        )}
-                        style={{ fontFamily: 'Inter, sans-serif' }}
-                      >
-                        {todo.text}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* Add Todo - Fixed at the bottom with equal height components */}
-                <div className="flex gap-2">
-                  <Input
-                    value={newTodo}
-                    onChange={(e) => setNewTodo(e.target.value)}
-                    placeholder="Add a new task..."
-                    className="flex-1 bg-white/80 border-pink-200 focus:border-pink-400 rounded-2xl h-12"
-                    onKeyPress={(e) => e.key === 'Enter' && addTodo()}
-                  />
-                  <Button
-                    onClick={addTodo}
-                    className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl h-12 w-12 p-0 flex items-center justify-center"
-                  >
-                    <Plus className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
           )}
-        </AnimatePresence>
 
-        {/* Sidebar Overlay for Mobile */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
+          {/* Local Video - Picture in Picture */}
+          {localSessionId && (
+            <Video
+              id={localSessionId}
+              tileClassName="!object-cover"
+              className="absolute bottom-32 right-6 aspect-video h-40 w-32 overflow-hidden rounded-xl border-4 border-pink-400 shadow-2xl z-30"
             />
           )}
-        </AnimatePresence>
+
+          {/* Video Controls - Bottom Center */}
+          {isConnected && (
+            <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 flex gap-4 z-30">
+              <Button
+                size="icon"
+                variant="secondary"
+                onClick={toggleAudio}
+                className="w-14 h-14 bg-white/90 backdrop-blur-sm border-pink-200 hover:bg-pink-50 shadow-xl"
+              >
+                {!isMicEnabled ? (
+                  <MicOffIcon className="size-6 text-black" />
+                ) : (
+                  <MicIcon className="size-6 text-black" />
+                )}
+              </Button>
+              <Button
+                size="icon"
+                variant="secondary"
+                onClick={toggleVideo}
+                className="w-14 h-14 bg-white/90 backdrop-blur-sm border-pink-200 hover:bg-pink-50 shadow-xl"
+              >
+                {!isCameraEnabled ? (
+                  <VideoOffIcon className="size-6 text-black" />
+                ) : (
+                  <VideoIcon className="size-6 text-black" />
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* End Call Button - Bottom Center */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-50">
+          <Button
+            onClick={handleCallEnd}
+            className="bg-red-500 hover:bg-red-600 text-white px-10 py-5 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center gap-3 font-medium text-lg"
+          >
+            <PhoneIcon className="size-7 rotate-[135deg]" />
+            End Call
+          </Button>
+        </div>
       </div>
+
+      {/* Flirt List Sidebar - Slides in/out smoothly */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div 
+            initial={{ x: "100%", opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "100%", opacity: 0 }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 300, 
+              damping: 30 
+            }}
+            className="fixed top-0 right-0 h-full w-80 bg-white/95 backdrop-blur-sm border-l border-pink-200 shadow-2xl z-40"
+          >
+            <div className="p-6 h-full flex flex-col">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  Flirt List
+                </h2>
+              </div>
+
+              {/* Todo List - Takes up most of the space */}
+              <div className="flex-1 space-y-3 mb-6 overflow-y-auto">
+                {todos.map((todo) => (
+                  <motion.div
+                    key={todo.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    onClick={() => toggleTodo(todo.id)}
+                    className="flex items-center gap-3 p-3 rounded-2xl hover:bg-pink-50 transition-colors duration-200 cursor-pointer group border border-pink-100 bg-white/70 shadow-sm"
+                  >
+                    {todo.completed ? (
+                      <CheckSquare className="size-5 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <Square className="size-5 text-gray-400 group-hover:text-pink-500 flex-shrink-0 transition-colors duration-200" />
+                    )}
+                    <span
+                      className={cn(
+                        "text-gray-700 transition-all duration-200",
+                        todo.completed && "line-through text-green-600"
+                      )}
+                      style={{ fontFamily: 'Inter, sans-serif' }}
+                    >
+                      {todo.text}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Add Todo - Fixed at the bottom with equal height components */}
+              <div className="flex gap-2">
+                <Input
+                  value={newTodo}
+                  onChange={(e) => setNewTodo(e.target.value)}
+                  placeholder="Add a new task..."
+                  className="flex-1 bg-white/80 border-pink-200 focus:border-pink-400 rounded-2xl h-12"
+                  onKeyPress={(e) => e.key === 'Enter' && addTodo()}
+                />
+                <Button
+                  onClick={addTodo}
+                  className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl h-12 w-12 p-0 flex items-center justify-center"
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar Overlay for Mobile */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <DailyAudio />
     </div>
